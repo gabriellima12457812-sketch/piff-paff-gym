@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Auxiliar: Verifica se usuário está autenticado
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Auxiliar: Verifica se é o dono do documento pelo UID
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Auxiliar: Verifica se o usuário possui permissão Admin Master
+    function isAdminMaster() {
+      return isSignedIn() && (
+        request.auth.token.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Coleção principal de usuários (isolamento total por UID)
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdminMaster();
+      allow create: if isOwner(uid) && request.resource.data.role == 'athlete';
+      allow update: if (
+        isOwner(uid) &&
+        request.resource.data.role == resource.data.role
+      ) || isAdminMaster();
+      allow delete: if isAdminMaster();
+
+      // Subcoleções isoladas (treinos, cargas, peso, metas, fotos, nutrição, spotify)
+      match /app_data/{docId} {
+        allow read, write: if isOwner(uid) || isAdminMaster();
+      }
+
+      match /workout_sessions/{sessionId} {
+        allow read, write: if isOwner(uid) || isAdminMaster();
+      }
+
+      match /evolution_photos/{photoId} {
+        allow read, write: if isOwner(uid) || isAdminMaster();
+      }
+    }
+
+    // Bloqueia acesso padrão a qualquer outro caminho
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

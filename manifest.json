@@ -1,0 +1,58 @@
+{
+  "id": "/?source=pwa",
+  "name": "Piff Paff Gym — Treino Pro, Evolução & Performance",
+  "short_name": "Piff Paff Gym",
+  "description": "Aplicativo completo de treinos de alta performance (Shape em V, Massa & Densidade, Ampulheta & Glúteos, Atlético & Seco), evolução física, gráficos de carga e nutrição. 100% gratuito.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "lang": "pt-BR",
+  "categories": ["fitness", "health", "lifestyle", "sports"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Iniciar Treino",
+      "short_name": "Treinar",
+      "description": "Ir direto para as matrizes e checklist de treino",
+      "url": "/index.html#workouts",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Evolução Física",
+      "short_name": "Evolução",
+      "description": "Comparar fotos Antes vs. Depois e gerar Card 9:16",
+      "url": "/index.html#evolution",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Hidratação & Proteína",
+      "short_name": "Nutrição",
+      "description": "Registrar água e proteínas do dia",
+      "url": "/index.html#nutrition",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
