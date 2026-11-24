@@ -413,6 +413,20 @@ function bindGlobalEvents() {
   bindGlobalMiniPlayerControls(() => (activeUser && activeData ? buildContext() : null));
 }
 
+function showPwaUpdateBanner() {
+  const banner = document.getElementById('pwa-update-banner');
+  if (!banner) return;
+  banner.classList.remove('hidden');
+  requestAnimationFrame(() => banner.classList.add('show'));
+
+  const btn = banner.querySelector('#btn-pwa-reload-now');
+  if (btn) {
+    btn.onclick = () => {
+      window.location.reload();
+    };
+  }
+}
+
 function registerPwa() {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -420,8 +434,42 @@ function registerPwa() {
   });
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      showPwaUpdateBanner();
+    });
+
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+
+        // Se já houver nova versão aguardando
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          showPwaUpdateBanner();
+        }
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showPwaUpdateBanner();
+            }
+          });
+        });
+
+        // Verifica atualizações sempre que o usuário voltar para o app instalado
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) {
+            reg.update().catch(() => {});
+          }
+        });
+      } catch {
+        // SW opcional em ambientes locais sem HTTPS
+      }
     });
   }
 }

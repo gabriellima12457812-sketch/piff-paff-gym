@@ -2425,3 +2425,33 @@ body.theme-pro .back-btn {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* Banner Automático de Atualização do PWA */
+.pwa-update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  width: calc(100% - 24px);
+  max-width: 448px;
+  z-index: 1280;
+  background: rgba(18, 18, 22, 0.96);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--emerald-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.pwa-update-banner.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
