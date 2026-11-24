@@ -2553,3 +2553,87 @@ body.theme-pro .back-btn {
 .spotify-mini-player {
   border-color: rgba(29, 185, 84, 0.48);
 }
+
+/* ============================================================================
+   MICRO-VÍDEO CONTÍNUO DE EXECUÇÃO (ATLAS & TREINO)
+   ============================================================================ */
+.mt-10 { margin-top: 10px; }
+.ml-auto { margin-left: auto; }
+
+.demo-video-stage {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #0b0b0e;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.demo-video-canvas {
+  display: block;
+  width: 100%;
+  height: 184px;
+  object-fit: cover;
+}
+
+.demo-video-compact .demo-video-canvas {
+  height: 162px;
+}
+
+.demo-video-hud-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.demo-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(9, 9, 11, 0.84);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.demo-rec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.demo-phase-badge {
+  background: rgba(9, 9, 11, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e4e4e7;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-yt-link {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(9, 9, 11, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fafafa;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-decoration: none;
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.6.0';
+const CACHE_NAME = 'piff-paff-gym-v2.7.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -23,6 +23,7 @@ const PRECACHE_ASSETS = [
   './js/modules/entitlements.js',
   './js/modules/workout-engine.js',
   './js/modules/atlas.js',
+  './js/modules/exercise-demo.js',
   './js/modules/progress-hub.js',
   './js/modules/profile.js',
   './js/modules/goals.js',

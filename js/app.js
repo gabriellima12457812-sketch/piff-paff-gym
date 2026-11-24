@@ -13,6 +13,7 @@ import {
   invalidateActiveSession,
 } from './modules/workout-engine.js';
 import { renderAtlasTab } from './modules/atlas.js';
+import { stopAllDemoVideos } from './modules/exercise-demo.js';
 import {
   renderProgressTab,
   resetProgressScreen,
@@ -284,6 +285,7 @@ function renderActiveTab() {
   const container = document.getElementById('main-view');
   if (!container || !activeUser || !activeData) return;
 
+  stopAllDemoVideos();
   const ctx = buildContext();
   const topSpBtn = document.getElementById('topbar-spotify-btn');
   if (topSpBtn) topSpBtn.classList.toggle('active', activeTab === 'spotify');

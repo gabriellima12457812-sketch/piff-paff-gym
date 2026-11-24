@@ -15,11 +15,13 @@ import {
   buildAdaptiveWorkout,
   buildCustomWorkoutSession,
 } from '../data/workouts.js';
+import { renderExerciseDemoMarkup, mountDemoVideos } from './exercise-demo.js';
 
 let activeSession = null;
 let sessionKey = '';
 let workoutScreen = 'home'; // 'home' | 'active' | 'matrices' | 'custom' | 'builder'
 let executionLayout = 'focus'; // 'focus' (1 por vez didático) | 'list'
+let showFocusDemo = true;
 let currentExIndex = 0;
 let selectedCustomId = null;
 
@@ -567,6 +569,7 @@ function renderActiveExecutionScreen(container, ctx, session) {
     </div>
   `;
 
+  mountDemoVideos(container);
   bindActiveExecutionEvents(container, ctx, session);
   updateTimerDom();
 }
@@ -597,9 +600,14 @@ function renderFocusExerciseView(ex, idx, totalEx, session, metrics, isPro) {
         <span>Exercício ${idx + 1} de ${totalEx}</span>
         ${ex.isFst7 ? '<span class="pill pill-gold pill-xs">FST-7</span>' : ''}
         ${isNewPr ? '<span class="pill pill-gold pill-xs">NOVO PR!</span>' : ''}
+        <button class="pill-btn-mini ml-auto" id="btn-toggle-focus-demo">
+          ${showFocusDemo ? 'Ocultar Vídeo' : '▶ Vídeo'}
+        </button>
       </div>
 
       <h2 class="focus-ex-title">${escapeHtml(ex.name)}</h2>
+
+      ${showFocusDemo ? `<div class="mb-14">${renderExerciseDemoMarkup(ex.name, ex.muscle, true)}</div>` : ''}
 
       <div class="focus-specs-row">
         <div><strong>${ex.sets.length}</strong><span>Séries</span></div>
@@ -1008,6 +1016,11 @@ function bindActiveExecutionEvents(container, ctx, session) {
 
   container.querySelector('#btn-toggle-layout')?.addEventListener('click', () => {
     executionLayout = executionLayout === 'focus' ? 'list' : 'focus';
+    renderWorkoutsTab(container, ctx);
+  });
+
+  container.querySelector('#btn-toggle-focus-demo')?.addEventListener('click', () => {
+    showFocusDemo = !showFocusDemo;
     renderWorkoutsTab(container, ctx);
   });
 

@@ -4,6 +4,8 @@
  * para destacar a anatomia e filtrar exercícios por ambiente e nível.
  */
 
+import { renderExerciseDemoMarkup, mountDemoVideos } from './exercise-demo.js';
+
 let activeSide = 'front'; // 'front' | 'back'
 let selectedMuscleId = 'peito';
 let envFilter = 'all'; // 'all' | 'home' | 'gym' | 'hybrid'
@@ -408,12 +410,12 @@ export function renderAtlasTab(container, ctx) {
         </div>
       </div>
 
-      <!-- Exercícios Filtrados para o Músculo Tocado -->
+      <!-- Exercícios Filtrados para o Músculo Tocado (com Micro-Vídeo Contínuo) -->
       <div class="mini-eyebrow mb-8">
-        EXERCÍCIOS PARA ${escapeHtml(activeMuscle.name.toUpperCase())} (${filteredExercises.length})
+        VÍDEOS & EXERCÍCIOS PARA ${escapeHtml(activeMuscle.name.toUpperCase())} (${filteredExercises.length})
       </div>
 
-      <div class="stack-10">
+      <div class="stack-12">
         ${
           filteredExercises.length === 0
             ? `<div class="card empty-state-card">Nenhum exercício neste filtro. Toque em <strong>Todos</strong> para ver todas as opções de ${escapeHtml(activeMuscle.name)}.</div>`
@@ -421,7 +423,8 @@ export function renderAtlasTab(container, ctx) {
                 .map(
                   (ex, idx) => `
                 <article class="card atlas-ex-card">
-                  <div class="atlas-ex-top">
+                  ${renderExerciseDemoMarkup(ex.name, activeMuscle.name, false)}
+                  <div class="atlas-ex-top mt-10">
                     <div class="goal-tags">
                       <span class="pill pill-emerald pill-xs">${ex.env === 'gym' ? 'Academia' : ex.env === 'home' ? 'Em Casa' : 'Híbrido'}</span>
                       <span class="pill pill-neutral pill-xs">${escapeHtml(ex.reps)}</span>
@@ -440,6 +443,7 @@ export function renderAtlasTab(container, ctx) {
     </div>
   `;
 
+  mountDemoVideos(container);
   bindAtlasEvents(container, ctx, activeMuscle, filteredExercises);
 }
 
