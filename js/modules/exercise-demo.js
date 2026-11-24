@@ -85,6 +85,11 @@ export function detectExerciseSpec(name = '', muscle = '') {
   if (n.includes('ponte de glúteo') || n.includes('frog pump')) return { kind: 'anim', id: 'single_leg_bridge' };
   if (n.includes('hip thrust') || n.includes('pélvica') || n.includes('pelvica')) return { kind: 'video', id: 'hip_thrust' };
 
+  // --- PANTURRILHA (verificar antes de Leg Press!) ---
+  if (n.includes('panturrilha') && n.includes('halter')) return { kind: 'anim', id: 'weighted_calf' };
+  if (n.includes('panturrilha') && n.includes('degrau')) return { kind: 'anim', id: 'single_calf' };
+  if (n.includes('panturrilha')) return { kind: 'video', id: 'calf_raise' };
+
   // --- QUADRÍCEPS & POSTERIORES ---
   if (n.includes('extensora')) return { kind: 'anim', id: 'leg_extension' };
   if (n.includes('leg press')) return { kind: 'anim', id: 'leg_press' };
@@ -96,10 +101,7 @@ export function detectExerciseSpec(name = '', muscle = '') {
   if ((n.includes('rdl') || n.includes('stiff')) && n.includes('unilateral')) return { kind: 'anim', id: 'single_leg_rdl' };
   if (n.includes('rdl') || n.includes('stiff') || n.includes('terra romeno')) return { kind: 'video', id: 'rdl_hinge' };
 
-  // --- PANTURRILHA & CARDIO ---
-  if (n.includes('panturrilha') && n.includes('halter')) return { kind: 'anim', id: 'weighted_calf' };
-  if (n.includes('panturrilha') && n.includes('degrau')) return { kind: 'anim', id: 'single_calf' };
-  if (n.includes('panturrilha')) return { kind: 'video', id: 'calf_raise' };
+  // --- CARDIO ---
   if (n.includes('hiit') || n.includes('burpee') || n.includes('cardio')) return { kind: 'anim', id: 'hiit_cardio' };
 
   // Fallbacks por grupo muscular
