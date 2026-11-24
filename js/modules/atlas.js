@@ -340,7 +340,7 @@ export function renderAtlasTab(container, ctx) {
 
         <div class="atlas-photo-viewport">
           <img
-            src="/assets/atlas-${activeSide}.jpg"
+            src="./assets/atlas-${activeSide}.jpg"
             alt="Atleta real vista ${activeSide === 'front' ? 'frontal' : 'posterior'}"
             class="atlas-real-photo"
             draggable="false"

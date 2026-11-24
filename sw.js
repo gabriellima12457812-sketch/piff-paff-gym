@@ -1,37 +1,37 @@
-const CACHE_NAME = 'piff-paff-gym-v2.3.0';
+const CACHE_NAME = 'piff-paff-gym-v2.4.0';
 
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/css/styles.css',
-  '/vendor/chart.umd.min.js',
-  '/assets/atlas-front.jpg',
-  '/assets/atlas-back.jpg',
-  '/icons/favicon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable-512.png',
-  '/icons/apple-touch-icon.png',
-  '/js/config.js',
-  '/js/storage.js',
-  '/js/auth.js',
-  '/js/app.js',
-  '/js/data/workouts.js',
-  '/js/data/tips.js',
-  '/js/data/demo-users.js',
-  '/js/modules/entitlements.js',
-  '/js/modules/workout-engine.js',
-  '/js/modules/atlas.js',
-  '/js/modules/progress-hub.js',
-  '/js/modules/profile.js',
-  '/js/modules/goals.js',
-  '/js/modules/evolution.js',
-  '/js/modules/story-card.js',
-  '/js/modules/charts.js',
-  '/js/modules/nutrition.js',
-  '/js/modules/spotify.js',
-  '/js/modules/admin.js'
+  './',
+  './index.html',
+  './manifest.json',
+  './css/styles.css',
+  './vendor/chart.umd.min.js',
+  './assets/atlas-front.jpg',
+  './assets/atlas-back.jpg',
+  './icons/favicon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png',
+  './js/config.js',
+  './js/storage.js',
+  './js/auth.js',
+  './js/app.js',
+  './js/data/workouts.js',
+  './js/data/tips.js',
+  './js/data/demo-users.js',
+  './js/modules/entitlements.js',
+  './js/modules/workout-engine.js',
+  './js/modules/atlas.js',
+  './js/modules/progress-hub.js',
+  './js/modules/profile.js',
+  './js/modules/goals.js',
+  './js/modules/evolution.js',
+  './js/modules/story-card.js',
+  './js/modules/charts.js',
+  './js/modules/nutrition.js',
+  './js/modules/spotify.js',
+  './js/modules/admin.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -75,7 +75,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
@@ -104,7 +104,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) return client.focus();
       }
-      if (self.clients.openWindow) return self.clients.openWindow('/');
+      if (self.clients.openWindow) return self.clients.openWindow('./');
     })
   );
 });

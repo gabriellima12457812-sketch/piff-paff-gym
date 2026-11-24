@@ -125,8 +125,8 @@ async function showSystemRestNotification(exName) {
     : 'Tempo de descanso zerado! Hora da próxima série!';
   const options = {
     body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
     vibrate: [220, 100, 220, 100, 320],
     tag: 'piff-paff-rest-done',
     renotify: true,

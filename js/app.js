@@ -444,7 +444,7 @@ function registerPwa() {
 
     window.addEventListener('load', async () => {
       try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
+        const reg = await navigator.serviceWorker.register('./sw.js');
 
         // Se já houver nova versão aguardando
         if (reg.waiting && navigator.serviceWorker.controller) {
