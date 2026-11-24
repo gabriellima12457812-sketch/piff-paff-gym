@@ -7,7 +7,11 @@
 import { APP_CONFIG, getRankForScore } from './config.js';
 import { storage } from './storage.js';
 import { auth } from './auth.js';
-import { renderWorkoutsTab, resetWorkoutRuntime } from './modules/workout-engine.js';
+import {
+  renderWorkoutsTab,
+  resetWorkoutRuntime,
+  invalidateActiveSession,
+} from './modules/workout-engine.js';
 import { renderAtlasTab } from './modules/atlas.js';
 import {
   renderProgressTab,
@@ -121,19 +125,25 @@ function buildContext() {
       if (!activeUser) return;
       activeUser = { ...activeUser, location: loc };
       storage.upsertUser(activeUser);
+      invalidateActiveSession();
       renderTopBar();
-      showToast(`Local: ${APP_CONFIG.LOCATIONS[loc].label}`);
+      renderActiveTab();
+      showToast(`Local: ${APP_CONFIG.LOCATIONS[loc].label}`, 'success');
     },
     setQuickLevel(lvl) {
       if (!activeUser) return;
       activeUser = { ...activeUser, level: lvl };
       storage.upsertUser(activeUser);
+      invalidateActiveSession();
       document.body.classList.toggle('theme-pro', activeUser.level === 'pro' || activeUser.role === 'admin');
       renderTopBar();
+      renderBottomNav();
+      renderActiveTab();
       showToast(
         lvl === 'pro'
           ? 'Atleta Pro ativo! FST-7, Rest-Pause e Drop-Set liberados.'
-          : `Nível: ${APP_CONFIG.LEVELS[lvl].label}`
+          : `Nível: ${APP_CONFIG.LEVELS[lvl].label}`,
+        'success'
       );
     },
     refreshHeader() {
@@ -362,6 +372,19 @@ function bindAuthEvents() {
     loadActiveSession('workouts');
   });
 
+  document.getElementById('btn-focus-admin-login')?.addEventListener('click', () => {
+    tabLogin?.click();
+    const idInput = document.getElementById('login-id');
+    const passInput = document.getElementById('login-pass');
+    if (idInput) {
+      idInput.value = '';
+      idInput.placeholder = 'Digite o login ou e-mail do Admin';
+      idInput.focus();
+    }
+    if (passInput) passInput.value = '';
+    showToast('Acesso restrito: digite e-mail/usuário e senha do Admin.');
+  });
+
   document.querySelectorAll('[data-demo-login]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const [u, p] = btn.dataset.demoLogin.split(':');
@@ -369,11 +392,7 @@ function bindAuthEvents() {
       if (!res.ok) return showAuthErr(res.error);
       showAuthErr('');
       showToast(`Entrou como ${res.user.name}`, 'success');
-      if (res.user.role === 'admin') {
-        loadActiveSession('profile', 'admin');
-      } else {
-        loadActiveSession('workouts');
-      }
+      loadActiveSession('workouts');
     });
   });
 }

@@ -2455,3 +2455,9 @@ body.theme-pro .back-btn {
   transform: translate(-50%, 0);
   opacity: 1;
 }
+
+.pill-btn-danger {
+  background: var(--danger-soft);
+  border-color: rgba(239, 68, 68, 0.38);
+  color: #fca5a5;
+}

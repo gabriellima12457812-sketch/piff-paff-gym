@@ -265,6 +265,11 @@ export function startRestTimer(seconds, exerciseName = '') {
   timerState.intervalId = setInterval(tickTimer, 500);
 }
 
+export function invalidateActiveSession() {
+  activeSession = null;
+  sessionKey = '';
+}
+
 export function resetWorkoutRuntime() {
   activeSession = null;
   sessionKey = '';
@@ -456,16 +461,12 @@ function renderWorkoutHomeScreen(container, ctx, session) {
   container.querySelectorAll('[data-home-loc]').forEach((btn) => {
     btn.addEventListener('click', () => {
       ctx.setQuickLocation(btn.dataset.homeLoc);
-      activeSession = null;
-      renderWorkoutsTab(container, ctx);
     });
   });
 
   container.querySelectorAll('[data-home-lvl]').forEach((btn) => {
     btn.addEventListener('click', () => {
       ctx.setQuickLevel(btn.dataset.homeLvl);
-      activeSession = null;
-      renderWorkoutsTab(container, ctx);
     });
   });
 

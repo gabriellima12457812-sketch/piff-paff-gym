@@ -31,7 +31,7 @@ export function renderProfileTab(container, ctx) {
         <div class="subscreen-topbar">
           <button class="back-btn" id="profile-back-btn">← Perfil</button>
           <span class="subscreen-title text-gold">Admin CRM</span>
-          <span class="subscreen-spacer"></span>
+          <button class="pill-btn-mini pill-btn-danger" id="btn-admin-topbar-logout">Sair</button>
         </div>
         <div id="admin-subscreen-body"></div>
       </div>
@@ -39,6 +39,9 @@ export function renderProfileTab(container, ctx) {
     container.querySelector('#profile-back-btn').addEventListener('click', () => {
       profileScreen = 'main';
       renderProfileTab(container, ctx);
+    });
+    container.querySelector('#btn-admin-topbar-logout').addEventListener('click', () => {
+      ctx.logout();
     });
     renderAdminTab(container.querySelector('#admin-subscreen-body'), ctx);
     return;
@@ -52,8 +55,9 @@ export function renderProfileTab(container, ctx) {
 
   container.innerHTML = `
     <div class="screen-enter">
-      <div class="screen-head">
+      <div class="home-greet-row">
         <h1 class="screen-title">Perfil</h1>
+        <button class="pill-btn-mini pill-btn-danger" id="btn-prof-top-logout">Sair da Conta</button>
       </div>
 
       <!-- Cartão do Atleta -->
@@ -132,7 +136,7 @@ export function renderProfileTab(container, ctx) {
           <div class="nav-row-icon icon-danger">🚪</div>
           <div class="nav-row-body">
             <strong>Sair da Conta</strong>
-            <span>Trocar de usuário ou entrar em conta demo</span>
+            <span>Voltar para a tela de login / trocar usuário</span>
           </div>
           <span class="nav-row-chevron">›</span>
         </button>
@@ -143,14 +147,12 @@ export function renderProfileTab(container, ctx) {
   container.querySelectorAll('[data-prof-loc]').forEach((btn) => {
     btn.addEventListener('click', () => {
       ctx.setQuickLocation(btn.dataset.profLoc);
-      renderProfileTab(container, ctx);
     });
   });
 
   container.querySelectorAll('[data-prof-lvl]').forEach((btn) => {
     btn.addEventListener('click', () => {
       ctx.setQuickLevel(btn.dataset.profLvl);
-      renderProfileTab(container, ctx);
     });
   });
 
@@ -164,7 +166,6 @@ export function renderProfileTab(container, ctx) {
     ctx.triggerPwaInstall();
   });
 
-  container.querySelector('#btn-prof-logout')?.addEventListener('click', () => {
-    ctx.logout();
-  });
+  container.querySelector('#btn-prof-logout')?.addEventListener('click', () => ctx.logout());
+  container.querySelector('#btn-prof-top-logout')?.addEventListener('click', () => ctx.logout());
 }
