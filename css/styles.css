@@ -2566,17 +2566,15 @@ body.theme-pro .back-btn {
   border-radius: var(--radius-md);
   overflow: hidden;
   background: #09090b;
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+  border: 1px solid rgba(16, 185, 129, 0.30);
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.demo-video-stage.is-peak,
 .demo-video-stage.is-peak-locked {
-  border-color: rgba(16, 185, 129, 0.62);
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.65);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.16);
 }
 
 .demo-frames-wrap {
@@ -2598,33 +2596,76 @@ body.theme-pro .back-btn {
   height: 100%;
   object-fit: contain;
   object-position: center center;
-  background: #09090b;
-  will-change: opacity, transform;
+  background: transparent;
   pointer-events: none;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .demo-frame-a {
   opacity: 1;
+  z-index: 1;
   transform: scale(1) translate3d(0, 0, 0);
-  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .demo-frame-b {
   opacity: 0;
-  transform: scale(1.01) translate3d(0, 0, 0);
-  transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+  transform: scale(1) translate3d(0, 0, 0);
+  transition: opacity 0.42s ease-in-out;
 }
 
-.demo-video-stage.is-peak .demo-frame-a,
-.demo-video-stage.is-peak-locked .demo-frame-a {
-  transform: scale(1.025) translate3d(var(--demo-dx, 0px), var(--demo-dy, -4px), 0);
+@keyframes demoLightCrossfade {
+  0%, 34% {
+    opacity: 0;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  48%, 82% {
+    opacity: 1;
+    transform: scale(1.018) translate3d(var(--demo-dx, 0px), var(--demo-dy, -3px), 0);
+  }
+  96%, 100% {
+    opacity: 0;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
 }
 
-.demo-video-stage.is-peak .demo-frame-b,
+@keyframes demoLightBaseMotion {
+  0%, 34% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  48%, 82% {
+    transform: scale(1.018) translate3d(var(--demo-dx, 0px), var(--demo-dy, -3px), 0);
+  }
+  96%, 100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes demoCadenceLight {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.demo-video-stage.is-ready:not(.is-peak-locked) .demo-frame-a {
+  animation: demoLightBaseMotion 3.2s ease-in-out infinite;
+}
+
+.demo-video-stage.is-ready:not(.is-peak-locked) .demo-frame-b {
+  animation: demoLightCrossfade 3.2s ease-in-out infinite;
+}
+
+.demo-video-stage.is-ready:not(.is-peak-locked) .demo-cadence-fill {
+  animation: demoCadenceLight 3.2s linear infinite;
+}
+
 .demo-video-stage.is-peak-locked .demo-frame-b {
   opacity: 1;
-  transform: scale(1.035) translate3d(var(--demo-dx, 0px), var(--demo-dy, -4px), 0);
+  transform: scale(1.018) translate3d(var(--demo-dx, 0px), var(--demo-dy, -3px), 0);
+}
+
+.demo-video-stage.is-peak-locked .demo-cadence-fill {
+  width: 65%;
 }
 
 .demo-video-hud-top {
@@ -2670,7 +2711,7 @@ body.theme-pro .back-btn {
   font-size: 9.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
 }
 
 .demo-phase-badge.is-peak {

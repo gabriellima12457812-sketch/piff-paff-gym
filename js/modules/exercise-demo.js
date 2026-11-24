@@ -1,7 +1,7 @@
 /**
- * Piff Paff Gym — Execução Real de Estúdio (100% Atleta Real em Estúdio Escuro + Músculo Esmeralda)
- * Renderização nítida em 60fps via GPU (dupla foto de estúdio Start -> Pico de Contração),
- * eliminando 100% as distorções de morphing/minterpolate e falhas de <video> no iOS Safari/PWA.
+ * Piff Paff Gym — Execução Real de Estúdio (Leve, Fluida e 100% Nítida)
+ * Transição suave via GPU entre Posição Inicial e Pico de Contração (músculo esmeralda),
+ * iniciando apenas após o carregamento completo dos 2 quadros para nunca piscar ou sumir no iPhone.
  */
 
 let activeCleanupFns = new Set();
@@ -21,20 +21,20 @@ function normalizeText(value = '') {
 }
 
 const MOTION_VECTORS = {
-  bench_press: { dy: '-5px', dx: '0px' },
+  bench_press: { dy: '-3px', dx: '0px' },
   chest_fly: { dy: '0px', dx: '0px' },
-  pushup: { dy: '-6px', dx: '0px' },
-  pulldown: { dy: '6px', dx: '0px' },
-  row: { dy: '-4px', dx: '-3px' },
-  lateral_raise: { dy: '-4px', dx: '0px' },
-  shoulder_press: { dy: '-6px', dx: '0px' },
-  biceps_curl: { dy: '-4px', dx: '0px' },
-  triceps_ext: { dy: '5px', dx: '0px' },
-  squat: { dy: '6px', dx: '0px' },
-  hip_thrust: { dy: '-6px', dx: '0px' },
-  rdl_hinge: { dy: '5px', dx: '0px' },
-  abs_core: { dy: '5px', dx: '0px' },
-  calf_raise: { dy: '-7px', dx: '0px' },
+  pushup: { dy: '-3px', dx: '0px' },
+  pulldown: { dy: '3px', dx: '0px' },
+  row: { dy: '-2px', dx: '-2px' },
+  lateral_raise: { dy: '-2px', dx: '0px' },
+  shoulder_press: { dy: '-3px', dx: '0px' },
+  biceps_curl: { dy: '-2px', dx: '0px' },
+  triceps_ext: { dy: '3px', dx: '0px' },
+  squat: { dy: '3px', dx: '0px' },
+  hip_thrust: { dy: '-3px', dx: '0px' },
+  rdl_hinge: { dy: '3px', dx: '0px' },
+  abs_core: { dy: '3px', dx: '0px' },
+  calf_raise: { dy: '-4px', dx: '0px' },
 };
 
 export function detectExerciseMotion(name = '', muscle = '') {
@@ -134,7 +134,7 @@ export function buildYoutubeSearchUrl(exerciseName) {
 
 export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = false) {
   const motion = detectExerciseMotion(exerciseName, muscleName);
-  const vec = MOTION_VECTORS[motion] || { dy: '-4px', dx: '0px' };
+  const vec = MOTION_VECTORS[motion] || { dy: '-3px', dx: '0px' };
   const ytUrl = buildYoutubeSearchUrl(exerciseName);
   const safeName = String(exerciseName).replace(/"/g, '&quot;');
   const srcA = `./assets/demos/${motion}_a.jpg?v=4`;
@@ -155,14 +155,14 @@ export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = fal
           src="${srcA}"
           alt="Posição inicial — ${safeName}"
           loading="eager"
-          decoding="async"
+          decoding="sync"
         />
         <img
           class="demo-frame-img demo-frame-b"
           src="${srcB}"
           alt="Pico de contração — ${safeName}"
           loading="eager"
-          decoding="async"
+          decoding="sync"
         />
       </div>
 
@@ -180,7 +180,7 @@ export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = fal
       >▶ YouTube ↗</a>
 
       <div class="demo-cadence-bar" aria-hidden="true">
-        <div class="demo-cadence-fill" data-cadence-fill></div>
+        <div class="demo-cadence-fill"></div>
       </div>
     </div>
   `;
@@ -193,57 +193,66 @@ export function mountDemoVideos(container) {
   const stages = Array.from(container.querySelectorAll('[data-demo-stage]'));
   if (!stages.length) return;
 
-  // Ciclo rítmico limpo (2.4s): Início nítido -> Contratação Máxima esmeralda nítida
-  const CYCLE_MS = 2400;
-  let rafId = null;
-  const startTime = performance.now();
+  let disposed = false;
 
-  // Permite tocar na imagem para alternar manualmente (pausar/retomar) sem interferir no link YouTube
+  // Só ativa a transição leve após o frame B estar 100% decodificado (evita sumir/piscar no iOS)
   stages.forEach((stage) => {
+    const imgB = stage.querySelector('.demo-frame-b');
+    const markReady = () => {
+      if (disposed) return;
+      if (imgB && imgB.naturalWidth > 0) {
+        stage.classList.add('is-ready');
+      }
+    };
+
+    if (imgB) {
+      if (imgB.complete && imgB.naturalWidth > 0) {
+        markReady();
+      } else {
+        imgB.addEventListener('load', markReady, { once: true });
+        if (typeof imgB.decode === 'function') {
+          imgB.decode().then(markReady).catch(() => {});
+        }
+      }
+    }
+
+    // Toque na área permite pausar na contração máxima para observar o músculo
     const onTap = (e) => {
       if (e.target.closest('a')) return;
-      const isManual = stage.classList.toggle('is-peak-locked');
+      if (!stage.classList.contains('is-ready')) return;
+      const locked = stage.classList.toggle('is-peak-locked');
       const badge = stage.querySelector('[data-phase-label]');
       if (badge) {
-        badge.textContent = isManual ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
-        badge.classList.toggle('is-peak', isManual);
+        badge.textContent = locked ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
+        badge.classList.toggle('is-peak', locked);
       }
     };
     stage.addEventListener('click', onTap);
     activeCleanupFns.add(() => stage.removeEventListener('click', onTap));
   });
 
-  const tick = (now) => {
-    const elapsed = (now - startTime) % CYCLE_MS;
-    const p = elapsed / CYCLE_MS;
-    const inPeak = p >= 0.42 && p < 0.90;
+  // Sincronização leve do rótulo de fase (ciclo de 3.2s controlado por CSS GPU)
+  const CYCLE_MS = 3200;
+  const startedAt = performance.now();
+  const intervalId = setInterval(() => {
+    const p = ((performance.now() - startedAt) % CYCLE_MS) / CYCLE_MS;
+    const inPeak = p >= 0.40 && p < 0.88;
 
     for (let i = 0; i < stages.length; i++) {
       const stage = stages[i];
-      if (stage.classList.contains('is-peak-locked')) continue;
-
-      const phaseEl = stage.querySelector('[data-phase-label]');
-      const fillEl = stage.querySelector('[data-cadence-fill]');
-
-      stage.classList.toggle('is-peak', inPeak);
-
-      if (phaseEl) {
-        const nextText = inPeak ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
-        if (phaseEl.textContent !== nextText) {
-          phaseEl.textContent = nextText;
-          phaseEl.classList.toggle('is-peak', inPeak);
-        }
-      }
-      if (fillEl) {
-        fillEl.style.width = `${(p * 100).toFixed(1)}%`;
+      if (!stage.classList.contains('is-ready') || stage.classList.contains('is-peak-locked')) continue;
+      const badge = stage.querySelector('[data-phase-label]');
+      if (!badge) continue;
+      const nextText = inPeak ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
+      if (badge.textContent !== nextText) {
+        badge.textContent = nextText;
+        badge.classList.toggle('is-peak', inPeak);
       }
     }
+  }, 160);
 
-    rafId = requestAnimationFrame(tick);
-  };
-
-  rafId = requestAnimationFrame(tick);
   activeCleanupFns.add(() => {
-    if (rafId !== null) cancelAnimationFrame(rafId);
+    disposed = true;
+    clearInterval(intervalId);
   });
 }
