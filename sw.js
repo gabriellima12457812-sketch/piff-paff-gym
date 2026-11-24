@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v1.0.0';
+const CACHE_NAME = 'piff-paff-gym-v2.0.0';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -20,6 +20,8 @@ const PRECACHE_ASSETS = [
   '/js/data/demo-users.js',
   '/js/modules/entitlements.js',
   '/js/modules/workout-engine.js',
+  '/js/modules/progress-hub.js',
+  '/js/modules/profile.js',
   '/js/modules/goals.js',
   '/js/modules/evolution.js',
   '/js/modules/story-card.js',
@@ -54,8 +56,6 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-
-  // Never intercept Spotify embeds or external API calls
   if (
     url.hostname.includes('spotify.com') ||
     url.hostname.includes('supabase.co') ||
@@ -64,7 +64,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for HTML navigations so users get fresh releases
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       fetch(request)
@@ -78,7 +77,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for local static assets & Google Fonts
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)

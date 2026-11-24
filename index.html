@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Piff Paff Gym — Treino Pro, Evolução Física & Performance</title>
-  <meta name="description" content="Piff Paff Gym: 4 Matrizes Pro (Shape em V, Massa & Densidade, Ampulheta & Glúteos, Atlético & Seco), evolução física com Card 9:16 para Stories, gráficos de carga e nutrição. 100% gratuito." />
+  <title>Piff Paff Gym — Treino Minimalista & Performance Pro</title>
+  <meta name="description" content="Piff Paff Gym: aplicativo mobile minimalista de treinos passo a passo (4 Matrizes Pro), evolução física com Card 9:16, gráficos de carga e nutrição. 100% gratuito." />
 
-  <!-- PWA & Mobile Native Meta Tags (iOS + Android) -->
+  <!-- PWA iOS & Android -->
   <meta name="theme-color" content="#09090b" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -16,241 +16,169 @@
   <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
 
-  <!-- Google Fonts: Inter -->
+  <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-  <!-- Local Chart.js (100% Offline PWA Ready) -->
+  <!-- Local Chart.js (Offline Ready) -->
   <script src="/vendor/chart.umd.min.js" defer></script>
 
-  <!-- Stylesheet -->
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <!-- BARRA DE AVISO DOURADA — MODO ADMIN IMPERSONATE -->
+  <!-- BARRA DOURADA DE AVISO — MODO ADMIN IMPERSONATE -->
   <div id="impersonate-banner" class="impersonate-banner hidden" role="alert">
     <div class="impersonate-banner-inner">
-      <span id="impersonate-banner-text">MODO ADMIN IMPERSONATE ATIVO</span>
-      <button id="btn-exit-impersonate" class="btn-impersonate-exit">← Voltar para Admin Master</button>
+      <span id="impersonate-banner-text">IMPERSONATE ATIVO</span>
+      <button id="btn-exit-impersonate" class="btn-impersonate-exit">← Admin</button>
     </div>
   </div>
 
-  <!-- TELA DE LOGIN E CADASTRO PÚBLICO GRATUITO -->
+  <!-- TELA DE LOGIN / CADASTRO GRATUITO (Estilo Mobile Minimalista) -->
   <main id="auth-screen" class="auth-screen">
     <div class="auth-card">
       <div class="auth-brand">
-        <img src="/icons/favicon.svg" alt="Piff Paff Gym" class="auth-logo" width="52" height="52" />
+        <img src="/icons/favicon.svg" alt="Piff Paff Gym" class="auth-logo" width="48" height="48" />
         <div>
-          <div class="pill pill-emerald mb-4">100% GRATUITO · SEM PAYWALL</div>
+          <div class="pill pill-emerald pill-xs mb-4">100% GRATUITO</div>
           <h1 class="auth-title">Piff Paff Gym</h1>
-          <p class="auth-subtitle">Performance Pro, Evolução Física & Gamificação isolados por UID.</p>
+          <p class="auth-subtitle">Simples, direto e de alta performance.</p>
         </div>
       </div>
 
       <div class="auth-tabs">
         <button id="auth-tab-login" class="auth-tab active" type="button">Entrar</button>
-        <button id="auth-tab-register" class="auth-tab" type="button">Criar Conta Grátis</button>
+        <button id="auth-tab-register" class="auth-tab" type="button">Criar Conta</button>
       </div>
 
       <div id="auth-error" class="auth-error hidden"></div>
 
-      <!-- Formulário de Login -->
       <form id="form-login" class="auth-form">
         <div class="form-field">
           <label for="login-id">Usuário ou E-mail</label>
-          <input id="login-id" name="identifier" type="text" required autocomplete="username" placeholder="Ex: admin, iniciante, intermediario ou pro" />
+          <input id="login-id" name="identifier" type="text" required autocomplete="username" placeholder="admin, iniciante, intermediario ou pro" />
         </div>
         <div class="form-field">
           <label for="login-pass">Senha</label>
-          <input id="login-pass" name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha" />
+          <input id="login-pass" name="password" type="password" required autocomplete="current-password" placeholder="Sua senha" />
         </div>
-        <button type="submit" class="btn btn-emerald btn-full btn-lg">Entrar no Piff Paff Gym</button>
+        <button type="submit" class="btn btn-emerald btn-full btn-lg">Entrar</button>
       </form>
 
-      <!-- Formulário de Cadastro Público Gratuito -->
       <form id="form-register" class="auth-form hidden">
-        <div class="form-grid-2">
-          <div class="form-field">
-            <label>Nome Completo</label>
-            <input name="name" type="text" required placeholder="Seu nome" />
-          </div>
-          <div class="form-field">
-            <label>Usuário (@login)</label>
-            <input name="username" type="text" required placeholder="seuusuario" />
-          </div>
+        <div class="form-field">
+          <label>Nome Completo</label>
+          <input name="name" type="text" required placeholder="Seu nome" />
         </div>
         <div class="form-grid-2">
           <div class="form-field">
-            <label>E-mail</label>
-            <input name="email" type="email" placeholder="voce@email.com" />
+            <label>Login</label>
+            <input name="username" type="text" required placeholder="usuario" />
           </div>
           <div class="form-field">
             <label>Senha</label>
-            <input name="password" type="password" required minlength="4" placeholder="Mín. 4 caracteres" />
+            <input name="password" type="password" required minlength="4" placeholder="Mín. 4" />
           </div>
+        </div>
+        <div class="form-field">
+          <label>E-mail (opcional)</label>
+          <input name="email" type="email" placeholder="voce@email.com" />
         </div>
         <div class="form-grid-2">
           <div class="form-field">
-            <label>Seu Nível</label>
+            <label>Nível</label>
             <select name="level">
               <option value="beginner">Iniciante</option>
               <option value="intermediate" selected>Intermediário</option>
-              <option value="pro">Atleta Pro (FST-7 / RPE 9–10)</option>
+              <option value="pro">Atleta Pro</option>
             </select>
           </div>
           <div class="form-field">
-            <label>Local de Treino</label>
+            <label>Local</label>
             <select name="location">
-              <option value="gym" selected>Academia Completa</option>
-              <option value="home">Treino em Casa</option>
-              <option value="hybrid">Híbrido / Viagem</option>
+              <option value="gym" selected>Academia</option>
+              <option value="home">Casa</option>
+              <option value="hybrid">Híbrido</option>
             </select>
           </div>
         </div>
         <div class="form-grid-3">
-          <div class="form-field">
-            <label>Peso Atual (kg)</label>
-            <input name="weightKg" type="number" step="0.1" value="78" required />
-          </div>
-          <div class="form-field">
-            <label>Altura (cm)</label>
-            <input name="heightCm" type="number" value="175" required />
-          </div>
-          <div class="form-field">
-            <label>Meta Peso (kg)</label>
-            <input name="goalWeightKg" type="number" step="0.1" value="75" required />
-          </div>
+          <div class="form-field"><label>Peso</label><input name="weightKg" type="number" step="0.1" value="78" required /></div>
+          <div class="form-field"><label>Altura</label><input name="heightCm" type="number" value="175" required /></div>
+          <div class="form-field"><label>Meta</label><input name="goalWeightKg" type="number" step="0.1" value="75" required /></div>
         </div>
-        <button type="submit" class="btn btn-emerald btn-full btn-lg">Criar Conta 100% Gratuita</button>
+        <button type="submit" class="btn btn-emerald btn-full btn-lg">Criar Conta Grátis</button>
       </form>
 
-      <!-- Contas Demo Prontas para Teste Imediato -->
       <div class="demo-accounts-box">
-        <div class="demo-box-title">Acesso Rápido — Contas Demo Prontas (1 Clique)</div>
+        <div class="demo-box-title">Testar em 1 Toque (Contas Demo)</div>
         <div class="demo-buttons-grid">
           <button type="button" class="demo-btn demo-btn-gold" data-demo-login="admin:admin123">
-            <strong>👑 Admin Master</strong>
-            <span>admin / admin123 · CRM</span>
+            <strong>👑 Admin</strong>
+            <span>admin / admin123</span>
           </button>
           <button type="button" class="demo-btn" data-demo-login="iniciante:123456">
-            <strong>🏠 Lucas (Iniciante)</strong>
-            <span>iniciante / 123456 · Casa</span>
+            <strong>🏠 Iniciante</strong>
+            <span>Casa · Meta Inversa</span>
           </button>
           <button type="button" class="demo-btn" data-demo-login="intermediario:123456">
-            <strong>🔥 Mariana (Interm.)</strong>
-            <span>intermediario / 123456</span>
+            <strong>🔥 Interm.</strong>
+            <span>Ampulheta</span>
           </button>
           <button type="button" class="demo-btn demo-btn-gold" data-demo-login="pro:123456">
-            <strong>⚡ Rafael (Atleta Pro)</strong>
-            <span>pro / 123456 · FST-7</span>
+            <strong>⚡ Atleta Pro</strong>
+            <span>Shape em V · FST-7</span>
           </button>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- SHELL PRINCIPAL DO APLICATIVO -->
-  <div id="app-shell" class="app-shell hidden">
-    <!-- Sidebar Desktop -->
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <img src="/icons/favicon.svg" alt="Piff Paff Gym" width="36" height="36" />
-        <div>
-          <div class="brand-name">Piff Paff Gym</div>
-          <div class="brand-tag">DARK PERFORMANCE PWA</div>
+  <!-- SHELL MOBILE MINIMALISTA (Centrado estilo App Nativo no Desktop, Full-bleed no Celular) -->
+  <div id="app-shell" class="mobile-app-shell hidden">
+    <header class="minimal-topbar">
+      <div class="topbar-brand">
+        <img src="/icons/favicon.svg" alt="Piff Paff Gym" width="26" height="26" />
+        <span>Piff Paff Gym</span>
+      </div>
+      <button id="header-score-chip" class="header-score-chip" title="Ver Score e Metas"></button>
+    </header>
+
+    <main id="main-view" class="mobile-main-view"></main>
+
+    <!-- MINI-PLAYER FLUTUANTE DO SPOTIFY -->
+    <aside id="spotify-mini-player" class="spotify-mini-player hidden" aria-label="Mini-Player Spotify">
+      <div class="mini-sp-bar">
+        <div class="mini-sp-info">
+          <span class="mini-sp-dot"></span>
+          <div>
+            <strong id="mini-sp-title">Beast Mode</strong>
+            <span id="mini-sp-sub">Spotify</span>
+          </div>
+        </div>
+        <div class="mini-sp-controls">
+          <button id="mini-sp-expand" class="btn btn-xs btn-ghost">▲</button>
+          <button id="mini-sp-close" class="icon-mini-del" title="Fechar">×</button>
         </div>
       </div>
-
-      <div id="sidebar-user-card" class="sidebar-user-card"></div>
-
-      <nav id="sidebar-nav" class="sidebar-nav" aria-label="Navegação principal"></nav>
-
-      <div class="sidebar-footer">
-        <button class="btn btn-sm btn-ghost btn-full" data-logout>Sair da Conta</button>
+      <div class="mini-sp-embed-wrap">
+        <iframe
+          id="mini-sp-iframe"
+          style="border-radius:10px"
+          src=""
+          width="100%"
+          height="152"
+          frameborder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+        ></iframe>
       </div>
     </aside>
 
-    <!-- Área Principal -->
-    <div class="app-content-wrap">
-      <!-- Top Header com Seletor 1-Clique de Local e Nível -->
-      <header class="top-header">
-        <div class="top-header-row-1">
-          <div class="mobile-brand-inline">
-            <img src="/icons/favicon.svg" alt="Piff Paff Gym" width="28" height="28" />
-            <strong>Piff Paff Gym</strong>
-          </div>
-          <div id="header-score-chip" class="header-score-chip"></div>
-          <div class="header-right-btns">
-            <button id="btn-pwa-install" class="btn btn-sm btn-ghost" title="Instalar PWA no iOS ou Android">📲 Instalar App</button>
-            <button class="btn btn-sm btn-ghost mobile-logout-btn" data-logout>Sair</button>
-          </div>
-        </div>
-
-        <!-- Barra 1 Clique: Local + Nível Dinâmico -->
-        <div class="quick-context-bar">
-          <div class="quick-group">
-            <span class="quick-group-lbl">LOCAL</span>
-            <div class="quick-pills">
-              <button class="quick-pill" data-quick-loc="gym">🏋️ Academia Completa</button>
-              <button class="quick-pill" data-quick-loc="home">🏠 Treino em Casa</button>
-              <button class="quick-pill" data-quick-loc="hybrid">✈️ Híbrido / Viagem</button>
-            </div>
-          </div>
-
-          <div class="quick-group">
-            <span class="quick-group-lbl">NÍVEL</span>
-            <div class="quick-pills">
-              <button class="quick-pill" data-quick-lvl="beginner">Iniciante</button>
-              <button class="quick-pill" data-quick-lvl="intermediate">Intermediário</button>
-              <button class="quick-pill quick-pill-pro" data-quick-lvl="pro">⚡ Atleta Pro</button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <!-- Conteúdo Dinâmico das Abas -->
-      <main id="main-view" class="main-view"></main>
-    </div>
-
-    <!-- Navegação Inferior Mobile (PWA Native Feel) -->
-    <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Navegação mobile"></nav>
+    <!-- BARRA INFERIOR DE 5 ABAS (Nativa iOS/Android) -->
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav" aria-label="Navegação"></nav>
   </div>
-
-  <!-- MINI-PLAYER FLUTUANTE DO SPOTIFY (Persiste durante os treinos) -->
-  <aside id="spotify-mini-player" class="spotify-mini-player hidden" aria-label="Mini-Player Spotify">
-    <div class="mini-sp-bar">
-      <div class="mini-sp-info">
-        <span class="mini-sp-dot"></span>
-        <div>
-          <strong id="mini-sp-title">Beast Mode</strong>
-          <span id="mini-sp-sub">Spotify Workout</span>
-        </div>
-      </div>
-      <div class="mini-sp-quick-presets">
-        <button data-mini-preset="beast_mode" title="Beast Mode">Beast</button>
-        <button data-mini-preset="gym_phonk" title="Gym Phonk">Phonk</button>
-        <button data-mini-preset="eletronica" title="Eletrônica">EDM</button>
-        <button data-mini-preset="heavy_workout" title="Heavy Workout">Heavy</button>
-      </div>
-      <div class="mini-sp-controls">
-        <button id="mini-sp-expand" class="btn btn-xs btn-ghost">Expandir</button>
-        <button id="mini-sp-close" class="icon-mini-del" title="Fechar Mini-Player">×</button>
-      </div>
-    </div>
-    <div class="mini-sp-embed-wrap">
-      <iframe
-        id="mini-sp-iframe"
-        style="border-radius:12px"
-        src=""
-        width="100%"
-        height="152"
-        frameborder="0"
-        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-        loading="lazy"
-      ></iframe>
-    </div>
-  </aside>
 
   <!-- MODAL UNIVERSAL -->
   <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">

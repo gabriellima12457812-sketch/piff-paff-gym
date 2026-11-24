@@ -1,10 +1,9 @@
 /**
- * Piff Paff Gym — Admin Master CRM
- * Exclusivo para conta Admin Master (admin / admin123):
- *  - KPIs gerais da plataforma
- *  - Diretório de atletas isolados por UID
- *  - Criação de novos usuários direto pelo CRM
- *  - Botão "Entrar nesta Conta" (Modo Impersonate com barra dourada de aviso no topo)
+ * Piff Paff Gym — Admin Master CRM (Estilo Mobile Minimalista)
+ * Exclusivo para Admin Master (admin / admin123):
+ *  - KPIs compactos
+ *  - Criar novo usuário isolado por UID
+ *  - Botão "Entrar nesta Conta" (Impersonate com barra dourada no topo)
  */
 
 import { APP_CONFIG, getRankForScore } from '../config.js';
@@ -28,139 +27,101 @@ export function renderAdminTab(container, ctx) {
     return;
   }
 
-  const users = storage.getUsers();
-  const enriched = users.map((u) => {
+  const users = storage.getUsers().map((u) => {
     const uData = storage.getUserData(u.uid, u);
     const gam = uData.gamification || {};
     return {
       ...u,
       score: Number(gam.score) || 0,
       totalWorkouts: Number(gam.totalWorkouts) || 0,
-      streakDays: Number(gam.streakDays) || 0,
-      photosCount: (uData.evolutionPhotos || []).length,
-      goalsCount: (uData.goals || []).length,
       rank: getRankForScore(gam.score || 0).current,
     };
   });
 
-  const totalAthletes = enriched.length;
-  const totalWorkoutsAll = enriched.reduce((sum, u) => sum + u.totalWorkouts, 0);
-  const avgScore = totalAthletes ? Math.round(enriched.reduce((sum, u) => sum + u.score, 0) / totalAthletes) : 0;
-  const proCount = enriched.filter((u) => u.level === 'pro').length;
-
-  const filtered = enriched.filter((u) => {
+  const filtered = users.filter((u) => {
     const q = adminSearch.trim().toLowerCase();
     const matchText =
       !q ||
       u.name.toLowerCase().includes(q) ||
       u.username.toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
       u.uid.toLowerCase().includes(q);
     const matchLevel = adminLevelFilter === 'all' || u.level === adminLevelFilter;
     return matchText && matchLevel;
   });
 
   container.innerHTML = `
-    <div class="section-header-row">
-      <div>
-        <div class="pill pill-gold mb-8">ADMIN MASTER EXCLUSIVO</div>
-        <h2 class="section-title">Admin CRM — Gestão de Atletas</h2>
-        <p class="section-subtitle">
-          Isolamento total por UID · Modo de lançamento: <strong>${APP_CONFIG.MONETIZATION.BILLING_ENABLED ? 'Planos VIP Ativos' : '100% Gratuito (VIP Modular Pronto)'}</strong>
-        </p>
-      </div>
-      <button class="btn btn-gold" id="btn-admin-create-user">+ Criar Novo Usuário</button>
-    </div>
-
-    <div class="kpi-grid-4 mb-24">
+    <div class="kpi-grid-3 mb-12">
       <div class="kpi-card kpi-gold">
-        <span class="kpi-label">Contas Isoladas (UID)</span>
-        <strong class="kpi-val text-gold">${totalAthletes}</strong>
+        <span class="kpi-label">Contas</span>
+        <strong class="kpi-val-sm text-gold">${users.length}</strong>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Treinos Concluídos</span>
-        <strong class="kpi-val">${totalWorkoutsAll}</strong>
+        <span class="kpi-label">Treinos</span>
+        <strong class="kpi-val-sm">${users.reduce((s, u) => s + u.totalWorkouts, 0)}</strong>
       </div>
       <div class="kpi-card kpi-emerald">
-        <span class="kpi-label">Score Médio Piff Paff</span>
-        <strong class="kpi-val text-emerald">${avgScore.toLocaleString('pt-BR')} pts</strong>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Atletas Nível Pro</span>
-        <strong class="kpi-val">${proCount}</strong>
+        <span class="kpi-label">Pro</span>
+        <strong class="kpi-val-sm text-emerald">${users.filter((u) => u.level === 'pro').length}</strong>
       </div>
     </div>
 
-    <section class="card">
-      <div class="admin-toolbar">
-        <input
-          type="search"
-          id="admin-search-input"
-          class="search-input"
-          placeholder="Buscar por nome, @login, e-mail ou UID..."
-          value="${escapeHtml(adminSearch)}"
-        />
-        <div class="pill-scroll">
-          <button class="filter-pill ${adminLevelFilter === 'all' ? 'active' : ''}" data-alvl="all">Todos</button>
-          <button class="filter-pill ${adminLevelFilter === 'beginner' ? 'active' : ''}" data-alvl="beginner">Iniciante</button>
-          <button class="filter-pill ${adminLevelFilter === 'intermediate' ? 'active' : ''}" data-alvl="intermediate">Intermediário</button>
-          <button class="filter-pill ${adminLevelFilter === 'pro' ? 'active' : ''}" data-alvl="pro">Atleta Pro</button>
-        </div>
-      </div>
+    <button class="btn btn-gold btn-full mb-12" id="btn-admin-create-user">+ Criar Novo Usuário</button>
 
-      <div class="admin-users-list">
-        ${filtered
-          .map((u) => {
-            const isSelf = u.uid === ctx.user.uid;
-            const locLabel = APP_CONFIG.LOCATIONS[u.location]?.shortLabel || u.location;
-            const lvlLabel = APP_CONFIG.LEVELS[u.level]?.shortLabel || u.level;
-            return `
-              <div class="admin-user-row ${u.role === 'admin' ? 'row-admin' : ''}">
-                <div class="admin-user-main">
-                  <div class="admin-avatar ${u.role === 'admin' || u.level === 'pro' ? 'avatar-gold' : ''}">
-                    ${escapeHtml(u.name.slice(0, 2).toUpperCase())}
-                  </div>
-                  <div>
-                    <div class="admin-name-line">
-                      <strong>${escapeHtml(u.name)}</strong>
-                      <span class="admin-handle">@${escapeHtml(u.username)}</span>
-                      ${u.role === 'admin' ? '<span class="pill pill-gold">Admin Master</span>' : ''}
-                      <span class="pill ${u.level === 'pro' ? 'pill-gold' : u.level === 'intermediate' ? 'pill-emerald' : 'pill-neutral'}">${lvlLabel}</span>
-                      <span class="pill pill-neutral">${locLabel}</span>
-                    </div>
-                    <div class="admin-meta-line">
-                      <span>UID: <code>${escapeHtml(u.uid)}</code></span>
-                      <span>· ${u.score.toLocaleString('pt-BR')} pts (${u.rank.name})</span>
-                      <span>· ${u.totalWorkouts} treinos</span>
-                      <span>· ${u.photosCount} fotos</span>
-                      <span>· ${u.goalsCount} metas</span>
-                    </div>
-                  </div>
-                </div>
+    <input
+      type="search"
+      id="admin-search-input"
+      class="search-input mb-10"
+      placeholder="Buscar nome, @login ou UID..."
+      value="${escapeHtml(adminSearch)}"
+    />
 
-                <div class="admin-user-actions">
-                  ${
-                    !isSelf
-                      ? `
-                        <button class="btn btn-sm btn-gold" data-impersonate-uid="${u.uid}">
-                          🔑 Entrar nesta Conta
-                        </button>
-                        <select class="admin-inline-select" data-change-lvl="${u.uid}" title="Alterar nível">
-                          <option value="beginner" ${u.level === 'beginner' ? 'selected' : ''}>Iniciante</option>
-                          <option value="intermediate" ${u.level === 'intermediate' ? 'selected' : ''}>Intermediário</option>
-                          <option value="pro" ${u.level === 'pro' ? 'selected' : ''}>Atleta Pro</option>
-                        </select>
-                        ${u.role !== 'admin' ? `<button class="icon-mini-del" data-admin-del="${u.uid}" title="Excluir conta">×</button>` : ''}
-                      `
-                      : `<span class="pill pill-gold">Sua Sessão Atual</span>`
-                  }
+    <div class="pill-scroll mb-16">
+      <button class="filter-pill ${adminLevelFilter === 'all' ? 'active' : ''}" data-alvl="all">Todos</button>
+      <button class="filter-pill ${adminLevelFilter === 'beginner' ? 'active' : ''}" data-alvl="beginner">Iniciante</button>
+      <button class="filter-pill ${adminLevelFilter === 'intermediate' ? 'active' : ''}" data-alvl="intermediate">Interm.</button>
+      <button class="filter-pill ${adminLevelFilter === 'pro' ? 'active' : ''}" data-alvl="pro">Pro</button>
+    </div>
+
+    <div class="stack-10">
+      ${filtered
+        .map((u) => {
+          const isSelf = u.uid === ctx.user.uid;
+          const lvlLabel = APP_CONFIG.LEVELS[u.level]?.shortLabel || u.level;
+          return `
+            <article class="card admin-mob-card ${u.role === 'admin' ? 'row-admin' : ''}">
+              <div class="admin-mob-top">
+                <div class="admin-avatar ${u.role === 'admin' || u.level === 'pro' ? 'avatar-gold' : ''}">
+                  ${escapeHtml(u.name.slice(0, 2).toUpperCase())}
                 </div>
+                <div class="admin-mob-info">
+                  <strong>${escapeHtml(u.name)}</strong>
+                  <span>@${escapeHtml(u.username)} · ${lvlLabel} · ${u.score.toLocaleString('pt-BR')} pts</span>
+                  <code class="uid-tag">${escapeHtml(u.uid)}</code>
+                </div>
+                ${u.role !== 'admin' ? `<button class="icon-mini-del" data-admin-del="${u.uid}" title="Excluir">×</button>` : ''}
               </div>
-            `;
-          })
-          .join('')}
-      </div>
-    </section>
+
+              ${
+                !isSelf
+                  ? `
+                    <div class="admin-mob-actions">
+                      <button class="btn btn-sm btn-gold flex-1" data-impersonate-uid="${u.uid}">
+                        🔑 Entrar nesta Conta
+                      </button>
+                      <select class="admin-inline-select" data-change-lvl="${u.uid}">
+                        <option value="beginner" ${u.level === 'beginner' ? 'selected' : ''}>Iniciante</option>
+                        <option value="intermediate" ${u.level === 'intermediate' ? 'selected' : ''}>Interm.</option>
+                        <option value="pro" ${u.level === 'pro' ? 'selected' : ''}>Pro</option>
+                      </select>
+                    </div>
+                  `
+                  : `<div class="pill pill-gold pill-xs mt-8">Sessão Admin Atual</div>`
+              }
+            </article>
+          `;
+        })
+        .join('')}
+    </div>
   `;
 
   bindAdminEvents(container, ctx);
@@ -185,66 +146,51 @@ function bindAdminEvents(container, ctx) {
     });
   });
 
-  // Botão "Entrar nesta Conta" (Modo Impersonate)
   container.querySelectorAll('[data-impersonate-uid]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const targetUid = btn.dataset.impersonateUid;
-      const res = auth.impersonate(targetUid);
-      if (!res.ok) {
-        return ctx.toast(res.error || 'Erro ao entrar na conta.', 'error');
-      }
-      ctx.toast(`Modo Impersonate ativo: visualizando conta de ${res.user.name}`, 'success');
+      const res = auth.impersonate(btn.dataset.impersonateUid);
+      if (!res.ok) return ctx.toast(res.error || 'Erro ao entrar.', 'error');
+      ctx.toast(`Modo Impersonate: ${res.user.name}`, 'success');
       ctx.onSessionChanged('workouts');
     });
   });
 
-  // Alterar nível pelo CRM
   container.querySelectorAll('[data-change-lvl]').forEach((sel) => {
     sel.addEventListener('change', () => {
-      const uid = sel.dataset.changeLvl;
-      const target = storage.getUserByUid(uid);
+      const target = storage.getUserByUid(sel.dataset.changeLvl);
       if (!target) return;
       storage.upsertUser({ ...target, level: sel.value });
-      ctx.toast(`Nível de ${target.name} atualizado para ${APP_CONFIG.LEVELS[sel.value].label}.`, 'success');
+      ctx.toast(`Nível de ${target.name} atualizado!`, 'success');
       renderAdminTab(container, ctx);
     });
   });
 
-  // Excluir usuário
   container.querySelectorAll('[data-admin-del]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const uid = btn.dataset.adminDel;
-      const target = storage.getUserByUid(uid);
+      const target = storage.getUserByUid(btn.dataset.adminDel);
       if (!target || target.role === 'admin') return;
-      storage.deleteUser(uid);
-      ctx.toast(`Conta @${target.username} removida.`);
+      storage.deleteUser(target.uid);
+      ctx.toast(`@${target.username} removido.`);
       renderAdminTab(container, ctx);
     });
   });
 
-  // Criar Novo Usuário pelo CRM
   container.querySelector('#btn-admin-create-user')?.addEventListener('click', () => {
     ctx.openModal(
-      'Criar Novo Usuário (Admin CRM)',
+      'Criar Novo Usuário',
       `
         <form id="form-admin-create-user" class="modal-form">
-          <div class="form-grid-2">
-            <div class="form-field">
-              <label>Nome Completo</label>
-              <input type="text" name="name" required placeholder="Ex: João Pedro" />
-            </div>
-            <div class="form-field">
-              <label>Login (Username)</label>
-              <input type="text" name="username" required placeholder="Ex: joaopedro" />
-            </div>
+          <div class="form-field">
+            <label>Nome Completo</label>
+            <input type="text" name="name" required placeholder="Ex: João Pedro" />
           </div>
           <div class="form-grid-2">
             <div class="form-field">
-              <label>E-mail</label>
-              <input type="email" name="email" placeholder="joao@email.com" />
+              <label>Login</label>
+              <input type="text" name="username" required placeholder="joaopedro" />
             </div>
             <div class="form-field">
-              <label>Senha de Acesso</label>
+              <label>Senha</label>
               <input type="text" name="password" required value="123456" />
             </div>
           </div>
@@ -258,29 +204,20 @@ function bindAdminEvents(container, ctx) {
               </select>
             </div>
             <div class="form-field">
-              <label>Local Padrão</label>
+              <label>Local</label>
               <select name="location">
-                <option value="gym" selected>Academia Completa</option>
-                <option value="home">Treino em Casa</option>
-                <option value="hybrid">Híbrido / Viagem</option>
+                <option value="gym" selected>Academia</option>
+                <option value="home">Casa</option>
+                <option value="hybrid">Híbrido</option>
               </select>
             </div>
           </div>
           <div class="form-grid-3">
-            <div class="form-field">
-              <label>Peso (kg)</label>
-              <input type="number" step="0.1" name="weightKg" value="78" />
-            </div>
-            <div class="form-field">
-              <label>Altura (cm)</label>
-              <input type="number" name="heightCm" value="176" />
-            </div>
-            <div class="form-field">
-              <label>Meta Peso (kg)</label>
-              <input type="number" step="0.1" name="goalWeightKg" value="75" />
-            </div>
+            <div class="form-field"><label>Peso</label><input type="number" step="0.1" name="weightKg" value="78" /></div>
+            <div class="form-field"><label>Altura</label><input type="number" name="heightCm" value="176" /></div>
+            <div class="form-field"><label>Meta</label><input type="number" step="0.1" name="goalWeightKg" value="75" /></div>
           </div>
-          <button type="submit" class="btn btn-gold btn-full">Criar Conta Isolada por UID</button>
+          <button type="submit" class="btn btn-gold btn-full">Criar Conta Isolada</button>
         </form>
       `,
       (modalBody) => {
@@ -290,7 +227,7 @@ function bindAdminEvents(container, ctx) {
           const res = auth.register({
             name: fd.get('name'),
             username: fd.get('username'),
-            email: fd.get('email'),
+            email: '',
             password: fd.get('password'),
             level: fd.get('level'),
             location: fd.get('location'),
@@ -298,11 +235,9 @@ function bindAdminEvents(container, ctx) {
             heightCm: Number(fd.get('heightCm')),
             goalWeightKg: Number(fd.get('goalWeightKg')),
           });
-          if (!res.ok) {
-            return ctx.toast(res.error, 'error');
-          }
+          if (!res.ok) return ctx.toast(res.error, 'error');
           ctx.closeModal();
-          ctx.toast(`Usuário @${res.user.username} criado com UID ${res.user.uid}!`, 'success');
+          ctx.toast(`@${res.user.username} criado!`, 'success');
           renderAdminTab(container, ctx);
         });
       }

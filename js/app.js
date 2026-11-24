@@ -1,22 +1,29 @@
 /**
- * Piff Paff Gym — Main Application Controller
+ * Piff Paff Gym — Mobile Minimalist App Controller
+ * 5 Abas Limpas na Barra Inferior: Treino · Progresso · Nutrição · Música · Perfil
+ * Cada funcionalidade abre em sua própria tela limpa e didática.
  */
 
 import { APP_CONFIG, getRankForScore } from './config.js';
 import { storage } from './storage.js';
 import { auth } from './auth.js';
-import { getUserPlanBadge } from './modules/entitlements.js';
 import { renderWorkoutsTab, resetWorkoutRuntime } from './modules/workout-engine.js';
-import { renderGoalsTab } from './modules/goals.js';
-import { renderEvolutionTab } from './modules/evolution.js';
-import { renderChartsTab } from './modules/charts.js';
+import {
+  renderProgressTab,
+  resetProgressScreen,
+  setProgressScreen,
+} from './modules/progress-hub.js';
 import { renderNutritionTab } from './modules/nutrition.js';
 import {
   renderSpotifyTab,
   syncSpotifyMiniPlayer,
   bindGlobalMiniPlayerControls,
 } from './modules/spotify.js';
-import { renderAdminTab } from './modules/admin.js';
+import {
+  renderProfileTab,
+  resetProfileScreen,
+  setProfileScreen,
+} from './modules/profile.js';
 
 let activeTab = 'workouts';
 let activeUser = null;
@@ -34,7 +41,7 @@ function showToast(message, type = 'info') {
   setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 260);
-  }, 3400);
+  }, 3000);
 }
 
 function openModal(title, htmlContent, onMount) {
@@ -47,9 +54,7 @@ function openModal(title, htmlContent, onMount) {
   bodyEl.innerHTML = htmlContent;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  if (typeof onMount === 'function') {
-    onMount(bodyEl);
-  }
+  if (typeof onMount === 'function') onMount(bodyEl);
 }
 
 function closeModal() {
@@ -57,6 +62,40 @@ function closeModal() {
   if (!overlay) return;
   overlay.classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+function triggerPwaInstall() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then((choice) => {
+      if (choice.outcome === 'accepted') showToast('Piff Paff Gym instalado!', 'success');
+      deferredInstallPrompt = null;
+    });
+    return;
+  }
+
+  openModal(
+    'Instalar Piff Paff Gym',
+    `
+      <div class="pwa-guide-modal">
+        <div class="pwa-guide-block">
+          <strong>📱 iPhone / iPad (Safari)</strong>
+          <ol>
+            <li>Toque em <strong>Compartilhar</strong> na barra inferior.</li>
+            <li>Toque em <strong>Adicionar à Tela de Início</strong>.</li>
+            <li>Toque em <strong>Adicionar</strong>.</li>
+          </ol>
+        </div>
+        <div class="pwa-guide-block">
+          <strong>🤖 Android (Chrome)</strong>
+          <ol>
+            <li>Toque no menu <strong>⋮</strong> no topo direito.</li>
+            <li>Selecione <strong>Instalar aplicativo</strong>.</li>
+          </ol>
+        </div>
+      </div>
+    `
+  );
 }
 
 function buildContext() {
@@ -75,10 +114,38 @@ function buildContext() {
       if (!activeUser) return;
       activeUser = { ...activeUser, ...partial };
       storage.upsertUser(activeUser);
-      renderHeaderAndControls();
+      renderTopBar();
+    },
+    setQuickLocation(loc) {
+      if (!activeUser) return;
+      activeUser = { ...activeUser, location: loc };
+      storage.upsertUser(activeUser);
+      renderTopBar();
+      showToast(`Local: ${APP_CONFIG.LOCATIONS[loc].label}`);
+    },
+    setQuickLevel(lvl) {
+      if (!activeUser) return;
+      activeUser = { ...activeUser, level: lvl };
+      storage.upsertUser(activeUser);
+      document.body.classList.toggle('theme-pro', activeUser.level === 'pro' || activeUser.role === 'admin');
+      renderTopBar();
+      showToast(
+        lvl === 'pro'
+          ? 'Atleta Pro ativo! FST-7, Rest-Pause e Drop-Set liberados.'
+          : `Nível: ${APP_CONFIG.LEVELS[lvl].label}`
+      );
     },
     refreshHeader() {
-      renderHeaderAndControls();
+      renderTopBar();
+    },
+    triggerPwaInstall,
+    logout() {
+      auth.logout();
+      resetWorkoutRuntime();
+      resetProgressScreen();
+      resetProfileScreen();
+      showToast('Sessão encerrada.');
+      loadActiveSession();
     },
     openModal,
     closeModal,
@@ -91,12 +158,14 @@ function buildContext() {
     },
     onSessionChanged(targetTab = 'workouts') {
       resetWorkoutRuntime();
+      resetProgressScreen();
+      resetProfileScreen();
       loadActiveSession(targetTab);
     },
   };
 }
 
-function loadActiveSession(preferredTab = null) {
+function loadActiveSession(preferredTab = null, subScreen = null) {
   activeUser = auth.getActiveUser();
   const authScreen = document.getElementById('auth-screen');
   const appShell = document.getElementById('app-shell');
@@ -114,18 +183,18 @@ function loadActiveSession(preferredTab = null) {
   authScreen.classList.add('hidden');
   appShell.classList.remove('hidden');
 
-  if (preferredTab) {
-    activeTab = preferredTab;
-  } else if (activeTab === 'admin' && activeUser.role !== 'admin') {
-    activeTab = 'workouts';
+  if (preferredTab) activeTab = preferredTab;
+  if (preferredTab === 'profile' && subScreen === 'admin' && activeUser.role === 'admin') {
+    setProfileScreen('admin');
+  } else if (preferredTab === 'progress' && subScreen) {
+    setProgressScreen(subScreen);
   }
 
-  // Tema visual dourado para Atleta Pro / Admin Master
   document.body.classList.toggle('theme-pro', activeUser.level === 'pro' || activeUser.role === 'admin');
 
   syncImpersonateBanner();
-  renderNavigation();
-  renderHeaderAndControls();
+  renderTopBar();
+  renderBottomNav();
   renderActiveTab();
   syncSpotifyMiniPlayer(buildContext());
 }
@@ -139,7 +208,7 @@ function syncImpersonateBanner() {
     document.body.classList.add('has-impersonate-bar');
     const txt = banner.querySelector('#impersonate-banner-text');
     if (txt) {
-      txt.innerHTML = `<strong>MODO ADMIN IMPERSONATE</strong> — Visualizando conta de <strong>${activeUser.name}</strong> (@${activeUser.username} · UID: ${activeUser.uid})`;
+      txt.innerHTML = `<strong>IMPERSONATE</strong> · ${activeUser.name} (@${activeUser.username})`;
     }
   } else {
     banner.classList.add('hidden');
@@ -147,103 +216,56 @@ function syncImpersonateBanner() {
   }
 }
 
-function getNavItems() {
-  const items = [
-    { id: 'workouts', label: 'Treinos', icon: '⚡' },
-    { id: 'goals', label: 'Metas & Score', icon: '🏆' },
-    { id: 'evolution', label: 'Evolução', icon: '📸' },
-    { id: 'charts', label: 'Gráficos', icon: '📈' },
-    { id: 'nutrition', label: 'Nutrição & Dicas', icon: '💧' },
-    { id: 'spotify', label: 'Spotify', icon: '🎵' },
-  ];
-
-  if (activeUser?.role === 'admin') {
-    items.push({ id: 'admin', label: 'Admin CRM', icon: '👑', isAdmin: true });
-  }
-  return items;
-}
-
-function renderNavigation() {
-  const items = getNavItems();
-  const sidebarNav = document.getElementById('sidebar-nav');
-  const mobileNav = document.getElementById('mobile-bottom-nav');
-
-  if (sidebarNav) {
-    sidebarNav.innerHTML = items
-      .map(
-        (it) => `
-        <button class="nav-item ${activeTab === it.id ? 'active' : ''} ${it.isAdmin ? 'nav-item-admin' : ''}" data-nav="${it.id}">
-          <span class="nav-icon">${it.icon}</span>
-          <span>${it.label}</span>
-        </button>
-      `
-      )
-      .join('');
-  }
-
-  if (mobileNav) {
-    mobileNav.innerHTML = items
-      .map(
-        (it) => `
-        <button class="mob-nav-item ${activeTab === it.id ? 'active' : ''} ${it.isAdmin ? 'mob-nav-admin' : ''}" data-nav="${it.id}">
-          <span class="mob-nav-icon">${it.icon}</span>
-          <span class="mob-nav-lbl">${it.label.split(' ')[0]}</span>
-        </button>
-      `
-      )
-      .join('');
-  }
-
-  document.querySelectorAll('[data-nav]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      activeTab = btn.dataset.nav;
-      renderNavigation();
-      renderActiveTab();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  });
-}
-
-function renderHeaderAndControls() {
+function renderTopBar() {
   if (!activeUser || !activeData) return;
-  const rankInfo = getRankForScore(activeData.gamification?.score || 0);
-  const planBadge = getUserPlanBadge(activeUser);
-
-  // Sidebar profile block
-  const sideProfile = document.getElementById('sidebar-user-card');
-  if (sideProfile) {
-    sideProfile.innerHTML = `
-      <div class="user-avatar ${activeUser.role === 'admin' || activeUser.level === 'pro' ? 'avatar-gold' : ''}">
-        ${activeUser.name.slice(0, 2).toUpperCase()}
-      </div>
-      <div class="user-card-meta">
-        <strong>${activeUser.name}</strong>
-        <span>@${activeUser.username} · ${rankInfo.current.name}</span>
-        <span class="pill ${planBadge.tone === 'gold' ? 'pill-gold' : 'pill-emerald'} pill-xs">${planBadge.label}</span>
-      </div>
-    `;
-  }
-
-  // Score pill no header
+  const rank = getRankForScore(activeData.gamification?.score || 0);
   const scoreChip = document.getElementById('header-score-chip');
   if (scoreChip) {
     scoreChip.innerHTML = `
-      <span class="score-chip-dot" style="background:${rankInfo.current.color}"></span>
+      <span class="score-chip-dot" style="background:${rank.current.color}"></span>
       <strong>${Number(activeData.gamification?.score || 0).toLocaleString('pt-BR')} pts</strong>
-      <span class="score-chip-rank">${rankInfo.current.name}</span>
     `;
   }
+}
 
-  // Seletor 1 clique de Local
-  document.querySelectorAll('[data-quick-loc]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.quickLoc === (activeUser.location || 'gym'));
-  });
+function renderBottomNav() {
+  const isAdmin = activeUser?.role === 'admin';
+  const items = [
+    { id: 'workouts', label: 'Treino', icon: '⚡' },
+    { id: 'progress', label: 'Progresso', icon: '📈' },
+    { id: 'nutrition', label: 'Nutrição', icon: '💧' },
+    { id: 'spotify', label: 'Música', icon: '🎵' },
+    { id: 'profile', label: isAdmin ? 'Admin' : 'Perfil', icon: isAdmin ? '👑' : '👤', isAdmin },
+  ];
 
-  // Seletor 1 clique de Nível Dinâmico
-  document.querySelectorAll('[data-quick-lvl]').forEach((btn) => {
-    const isAct = btn.dataset.quickLvl === (activeUser.level || 'intermediate');
-    btn.classList.toggle('active', isAct);
-    btn.classList.toggle('active-gold', isAct && btn.dataset.quickLvl === 'pro');
+  const mobileNav = document.getElementById('mobile-bottom-nav');
+  if (!mobileNav) return;
+
+  mobileNav.innerHTML = items
+    .map(
+      (it) => `
+      <button class="mob-nav-item ${activeTab === it.id ? 'active' : ''} ${it.isAdmin ? 'mob-nav-admin' : ''}" data-nav="${it.id}">
+        <span class="mob-nav-icon">${it.icon}</span>
+        <span class="mob-nav-lbl">${it.label}</span>
+      </button>
+    `
+    )
+    .join('');
+
+  mobileNav.querySelectorAll('[data-nav]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.nav;
+      // Ao tocar na aba já ativa, retorna à tela raiz daquela aba (comportamento iOS/Android)
+      if (target === activeTab) {
+        if (target === 'workouts') resetWorkoutRuntime();
+        if (target === 'progress') resetProgressScreen();
+        if (target === 'profile') resetProfileScreen();
+      }
+      activeTab = target;
+      renderBottomNav();
+      renderActiveTab();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   });
 }
 
@@ -252,19 +274,12 @@ function renderActiveTab() {
   if (!container || !activeUser || !activeData) return;
 
   const ctx = buildContext();
-
   switch (activeTab) {
     case 'workouts':
       renderWorkoutsTab(container, ctx);
       break;
-    case 'goals':
-      renderGoalsTab(container, ctx);
-      break;
-    case 'evolution':
-      renderEvolutionTab(container, ctx);
-      break;
-    case 'charts':
-      renderChartsTab(container, ctx);
+    case 'progress':
+      renderProgressTab(container, ctx);
       break;
     case 'nutrition':
       renderNutritionTab(container, ctx);
@@ -272,8 +287,8 @@ function renderActiveTab() {
     case 'spotify':
       renderSpotifyTab(container, ctx);
       break;
-    case 'admin':
-      renderAdminTab(container, ctx);
+    case 'profile':
+      renderProfileTab(container, ctx);
       break;
     default:
       renderWorkoutsTab(container, ctx);
@@ -289,13 +304,8 @@ function bindAuthEvents() {
 
   const showAuthErr = (msg) => {
     if (!authErr) return;
-    if (!msg) {
-      authErr.classList.add('hidden');
-      authErr.textContent = '';
-    } else {
-      authErr.textContent = msg;
-      authErr.classList.remove('hidden');
-    }
+    authErr.textContent = msg || '';
+    authErr.classList.toggle('hidden', !msg);
   };
 
   tabLogin?.addEventListener('click', () => {
@@ -320,7 +330,7 @@ function bindAuthEvents() {
     const res = auth.login(fd.get('identifier'), fd.get('password'));
     if (!res.ok) return showAuthErr(res.error);
     showAuthErr('');
-    showToast(`Bem-vindo de volta, ${res.user.name}!`, 'success');
+    showToast(`Bem-vindo, ${res.user.name}!`, 'success');
     loadActiveSession('workouts');
   });
 
@@ -341,11 +351,10 @@ function bindAuthEvents() {
     if (!res.ok) return showAuthErr(res.error);
     showAuthErr('');
     auth.startSessionForUser(res.user.uid);
-    showToast(`Conta criada gratuitamente! Isolamento UID ativo.`, 'success');
+    showToast('Conta gratuita criada!', 'success');
     loadActiveSession('workouts');
   });
 
-  // Botões 1-clique das Contas Demo
   document.querySelectorAll('[data-demo-login]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const [u, p] = btn.dataset.demoLogin.split(':');
@@ -353,103 +362,37 @@ function bindAuthEvents() {
       if (!res.ok) return showAuthErr(res.error);
       showAuthErr('');
       showToast(`Entrou como ${res.user.name}`, 'success');
-      loadActiveSession(res.user.role === 'admin' ? 'admin' : 'workouts');
+      if (res.user.role === 'admin') {
+        loadActiveSession('profile', 'admin');
+      } else {
+        loadActiveSession('workouts');
+      }
     });
   });
 }
 
-function bindGlobalAppEvents() {
-  // 1-clique Local
-  document.querySelectorAll('[data-quick-loc]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!activeUser) return;
-      const loc = btn.dataset.quickLoc;
-      activeUser = { ...activeUser, location: loc };
-      storage.upsertUser(activeUser);
-      renderHeaderAndControls();
-      renderActiveTab();
-      showToast(`Local alterado para ${APP_CONFIG.LOCATIONS[loc].label}`);
-    });
-  });
-
-  // 1-clique Nível Dinâmico
-  document.querySelectorAll('[data-quick-lvl]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!activeUser) return;
-      const lvl = btn.dataset.quickLvl;
-      activeUser = { ...activeUser, level: lvl };
-      storage.upsertUser(activeUser);
-      document.body.classList.toggle('theme-pro', activeUser.level === 'pro' || activeUser.role === 'admin');
-      renderHeaderAndControls();
-      renderActiveTab();
-      showToast(
-        lvl === 'pro'
-          ? 'Modo Atleta Pro ativado! FST-7, Rest-Pause, Drop-Set e RPE 9–10 liberados.'
-          : `Nível alterado para ${APP_CONFIG.LEVELS[lvl].label}`
-      );
-    });
-  });
-
-  // Sair do Modo Impersonate
+function bindGlobalEvents() {
   document.getElementById('btn-exit-impersonate')?.addEventListener('click', () => {
     const res = auth.exitImpersonation();
     if (res.ok) {
       resetWorkoutRuntime();
-      showToast('Retornou para sua sessão Admin Master.', 'success');
-      loadActiveSession('admin');
+      resetProgressScreen();
+      showToast('Voltou para Admin Master.', 'success');
+      loadActiveSession('profile', 'admin');
     }
   });
 
-  // Logout
-  document.querySelectorAll('[data-logout]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      auth.logout();
-      resetWorkoutRuntime();
-      showToast('Sessão encerrada com segurança.');
-      loadActiveSession();
-    });
+  document.getElementById('header-score-chip')?.addEventListener('click', () => {
+    if (!activeUser) return;
+    activeTab = 'progress';
+    setProgressScreen('goals');
+    renderBottomNav();
+    renderActiveTab();
   });
 
-  // Modal close
   document.getElementById('modal-close-btn')?.addEventListener('click', closeModal);
   document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'modal-overlay') closeModal();
-  });
-
-  // PWA Install button
-  document.getElementById('btn-pwa-install')?.addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      const choice = await deferredInstallPrompt.userChoice;
-      if (choice.outcome === 'accepted') {
-        showToast('Piff Paff Gym instalado como App!', 'success');
-      }
-      deferredInstallPrompt = null;
-      return;
-    }
-
-    openModal(
-      'Instalar Piff Paff Gym (iOS & Android)',
-      `
-        <div class="pwa-guide-modal">
-          <div class="pwa-guide-block">
-            <strong>📱 No iPhone / iPad (Safari iOS)</strong>
-            <ol>
-              <li>Toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima) na barra inferior do Safari.</li>
-              <li>Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>.</li>
-              <li>Toque em <strong>Adicionar</strong> — pronto! Abre em tela cheia como app nativo.</li>
-            </ol>
-          </div>
-          <div class="pwa-guide-block">
-            <strong>🤖 No Android (Chrome / Edge)</strong>
-            <ol>
-              <li>Toque no menu <strong>⋮</strong> (três pontinhos) no canto superior direito.</li>
-              <li>Selecione <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
-            </ol>
-          </div>
-        </div>
-      `
-    );
   });
 
   bindGlobalMiniPlayerControls(() => (activeUser && activeData ? buildContext() : null));
@@ -463,25 +406,25 @@ function registerPwa() {
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.warn('[PWA] Service Worker registration skipped:', err);
-      });
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
   }
 }
 
-// Bootstrap
 document.addEventListener('DOMContentLoaded', () => {
   auth.init();
   bindAuthEvents();
-  bindGlobalAppEvents();
+  bindGlobalEvents();
   registerPwa();
 
-  // Hash shortcut support from manifest.json shortcuts
-  const hashTab = window.location.hash.replace('#', '');
-  const validTabs = new Set(['workouts', 'goals', 'evolution', 'charts', 'nutrition', 'spotify', 'admin']);
-  if (validTabs.has(hashTab)) {
-    activeTab = hashTab;
+  const hash = window.location.hash.replace('#', '');
+  if (hash === 'evolution') {
+    activeTab = 'progress';
+    setProgressScreen('evolution');
+  } else if (hash === 'nutrition') {
+    activeTab = 'nutrition';
+  } else if (hash === 'workouts') {
+    activeTab = 'workouts';
   }
 
   loadActiveSession();

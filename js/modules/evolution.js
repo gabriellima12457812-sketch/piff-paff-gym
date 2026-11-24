@@ -1,9 +1,6 @@
 /**
- * Piff Paff Gym — Evolução Física
- * - Upload gratuito de fotos com compressão Canvas automática
- * - Guia Prático de Fotos
- * - Comparador Antes vs. Depois (Lado a Lado + Slider) com diferença de peso
- * - Gerador de Card 9:16 (1080x1920) para Instagram Stories
+ * Piff Paff Gym — Evolução Física (Estilo Mobile Minimalista)
+ * Sub-telas limpas: [Antes vs. Depois & Stories 9:16] | [Minhas Fotos] + Modal Guia Prático
  */
 
 import { APP_CONFIG } from '../config.js';
@@ -13,19 +10,19 @@ import {
   downloadCanvasPng,
 } from './story-card.js';
 
+let evoView = 'compare'; // 'compare' | 'gallery'
 let selectedBeforeId = null;
 let selectedAfterId = null;
 let compareMode = 'side'; // 'side' | 'slider'
 let sliderPercent = 50;
-let showGuide = false;
 
 function compressImageFile(file, maxDim = 1080, quality = 0.78) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Falha ao ler o arquivo de imagem.'));
+    reader.onerror = () => reject(new Error('Falha ao ler a imagem.'));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error('Arquivo não é uma imagem válida.'));
+      img.onerror = () => reject(new Error('Imagem inválida.'));
       img.onload = () => {
         let w = img.width;
         let h = img.height;
@@ -41,10 +38,8 @@ function compressImageFile(file, maxDim = 1080, quality = 0.78) {
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
-        const c = canvas.getContext('2d');
-        c.drawImage(img, 0, 0, w, h);
-        const compressed = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressed);
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
       };
       img.src = reader.result;
     };
@@ -70,12 +65,8 @@ export function renderEvolutionTab(container, ctx) {
   const photos = [...(ctx.data.evolutionPhotos || [])].sort((a, b) => a.date.localeCompare(b.date));
 
   if (photos.length >= 2) {
-    if (!selectedBeforeId || !photos.some((p) => p.id === selectedBeforeId)) {
-      selectedBeforeId = photos[0].id;
-    }
-    if (!selectedAfterId || !photos.some((p) => p.id === selectedAfterId)) {
-      selectedAfterId = photos[photos.length - 1].id;
-    }
+    if (!selectedBeforeId || !photos.some((p) => p.id === selectedBeforeId)) selectedBeforeId = photos[0].id;
+    if (!selectedAfterId || !photos.some((p) => p.id === selectedAfterId)) selectedAfterId = photos[photos.length - 1].id;
   } else {
     selectedBeforeId = photos[0]?.id || null;
     selectedAfterId = photos[0]?.id || null;
@@ -83,119 +74,67 @@ export function renderEvolutionTab(container, ctx) {
 
   const beforePhoto = photos.find((p) => p.id === selectedBeforeId) || photos[0] || null;
   const afterPhoto = photos.find((p) => p.id === selectedAfterId) || photos[photos.length - 1] || null;
-
   const deltaKg =
     beforePhoto && afterPhoto
       ? Math.round((Number(afterPhoto.weightKg) - Number(beforePhoto.weightKg)) * 10) / 10
       : 0;
   const daysElapsed =
     beforePhoto && afterPhoto
-      ? Math.max(
-          0,
-          Math.round(
-            (new Date(afterPhoto.date).getTime() - new Date(beforePhoto.date).getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
+      ? Math.max(0, Math.round((new Date(afterPhoto.date) - new Date(beforePhoto.date)) / 86400000))
       : 0;
 
   container.innerHTML = `
-    <div class="section-header-row">
-      <div>
-        <h2 class="section-title">Evolução Física</h2>
-        <p class="section-subtitle">Upload gratuito com compressão inteligente, comparador Antes vs. Depois e Card 9:16 para Instagram Stories.</p>
-      </div>
-      <div class="header-action-group">
-        <button class="btn btn-ghost" id="btn-toggle-photo-guide">
-          ${showGuide ? 'Ocultar Guia de Fotos' : '📷 Guia Prático de Fotos'}
-        </button>
-        <button class="btn btn-emerald" id="btn-upload-photo">+ Nova Foto</button>
-      </div>
+    <div class="segmented-control full-seg mb-12">
+      <button class="seg-btn ${evoView === 'compare' ? 'active' : ''}" data-eview="compare">Antes vs. Depois</button>
+      <button class="seg-btn ${evoView === 'gallery' ? 'active' : ''}" data-eview="gallery">Fotos (${photos.length})</button>
     </div>
 
-    ${showGuide ? renderPhotoGuideCard() : ''}
+    <div class="action-pair-row mb-16">
+      <button class="btn btn-emerald flex-1" id="btn-upload-photo">+ Nova Foto</button>
+      <button class="btn btn-ghost" id="btn-open-photo-guide">📷 Guia</button>
+    </div>
 
-    <!-- Comparador Antes vs. Depois -->
-    <section class="card mb-24">
-      <div class="card-header-flex">
-        <div>
-          <h3 class="card-title">Comparador Antes vs. Depois</h3>
-          <p class="card-sub">Selecione dois registros para ver a diferença real de peso e gerar seu card 9:16.</p>
-        </div>
-        <div class="segmented-control">
-          <button class="seg-btn ${compareMode === 'side' ? 'active' : ''}" data-cmode="side">Lado a Lado</button>
-          <button class="seg-btn ${compareMode === 'slider' ? 'active' : ''}" data-cmode="slider">Slider</button>
-        </div>
-      </div>
-
-      ${
-        photos.length < 2
-          ? `<div class="empty-inline">Adicione pelo menos <strong>2 fotos de evolução</strong> para ativar o comparador Antes vs. Depois e o gerador de Card 9:16.</div>`
+    ${
+      evoView === 'compare'
+        ? photos.length < 2
+          ? `<div class="card empty-state-card">Envie pelo menos <strong>2 fotos</strong> para comparar Antes vs. Depois e gerar seu Card 9:16.</div>`
           : `
-            <div class="compare-selectors">
-              <div class="form-field">
-                <label>Foto ANTES</label>
-                <select id="select-before-photo">
-                  ${photos
-                    .map(
-                      (p) =>
-                        `<option value="${p.id}" ${p.id === beforePhoto.id ? 'selected' : ''}>${formatDateBr(p.date)} — ${p.weightKg}kg (${escapeHtml(p.pose)})</option>`
-                    )
-                    .join('')}
-                </select>
+            <div class="compare-delta-banner mb-12">
+              <div>
+                <span class="mini-eyebrow">DIFERENÇA DE PESO</span>
+                <strong class="${deltaKg <= 0 ? 'text-emerald' : 'text-gold'}">${deltaKg > 0 ? '+' : ''}${deltaKg.toFixed(1)} kg</strong>
               </div>
-              <div class="form-field">
-                <label>Foto DEPOIS</label>
-                <select id="select-after-photo">
-                  ${photos
-                    .map(
-                      (p) =>
-                        `<option value="${p.id}" ${p.id === afterPhoto.id ? 'selected' : ''}>${formatDateBr(p.date)} — ${p.weightKg}kg (${escapeHtml(p.pose)})</option>`
-                    )
-                    .join('')}
-                </select>
+              <div>
+                <span class="mini-eyebrow">INTERVALO</span>
+                <strong>${daysElapsed} dias</strong>
               </div>
-            </div>
-
-            <div class="compare-delta-strip">
-              <div class="delta-pill ${deltaKg <= 0 ? 'delta-emerald' : 'delta-gold'}">
-                Diferença de Peso: <strong>${deltaKg > 0 ? '+' : ''}${deltaKg.toFixed(1)} kg</strong>
-              </div>
-              <div class="delta-pill">Intervalo: <strong>${daysElapsed} dias</strong></div>
-              ${
-                beforePhoto.bodyFatPct && afterPhoto.bodyFatPct
-                  ? `<div class="delta-pill">BF%: <strong>${beforePhoto.bodyFatPct}% → ${afterPhoto.bodyFatPct}%</strong></div>`
-                  : ''
-              }
-              <button class="btn btn-gold btn-sm ml-auto" id="btn-generate-story-card">
-                ✨ Gerar Card 9:16 (Stories)
-              </button>
+              <button class="pill-btn-mini" id="btn-toggle-cmode">${compareMode === 'side' ? '⇄ Slider' : '◫ Lado a Lado'}</button>
             </div>
 
             ${
               compareMode === 'side'
                 ? `
-                  <div class="compare-side-grid">
+                  <div class="compare-side-compact mb-12">
                     <div class="compare-frame">
-                      <span class="compare-tag">ANTES · ${formatDateBr(beforePhoto.date)}</span>
-                      <img src="${beforePhoto.dataUrl}" alt="Foto Antes" />
+                      <span class="compare-tag">ANTES</span>
+                      <img src="${beforePhoto.dataUrl}" alt="Antes" />
                       <div class="compare-caption">
-                        <strong>${beforePhoto.weightKg} kg</strong>
-                        <span>${escapeHtml(beforePhoto.note || beforePhoto.pose)}</span>
+                        <strong>${beforePhoto.weightKg}kg</strong>
+                        <span>${formatDateBr(beforePhoto.date)}</span>
                       </div>
                     </div>
                     <div class="compare-frame compare-frame-after">
-                      <span class="compare-tag compare-tag-after">DEPOIS · ${formatDateBr(afterPhoto.date)}</span>
-                      <img src="${afterPhoto.dataUrl}" alt="Foto Depois" />
+                      <span class="compare-tag compare-tag-after">DEPOIS</span>
+                      <img src="${afterPhoto.dataUrl}" alt="Depois" />
                       <div class="compare-caption">
-                        <strong class="text-emerald">${afterPhoto.weightKg} kg</strong>
-                        <span>${escapeHtml(afterPhoto.note || afterPhoto.pose)}</span>
+                        <strong class="text-emerald">${afterPhoto.weightKg}kg</strong>
+                        <span>${formatDateBr(afterPhoto.date)}</span>
                       </div>
                     </div>
                   </div>
                 `
                 : `
-                  <div class="slider-compare-wrap" id="slider-compare-wrap">
+                  <div class="slider-compare-wrap mb-12" id="slider-compare-wrap">
                     <img class="slider-img-base" src="${afterPhoto.dataUrl}" alt="Depois" />
                     <img
                       class="slider-img-before-clip"
@@ -213,86 +152,98 @@ export function renderEvolutionTab(container, ctx) {
                   </div>
                 `
             }
+
+            <div class="form-grid-2 mb-16">
+              <div class="form-field">
+                <label>Antes</label>
+                <select id="select-before-photo">
+                  ${photos
+                    .map((p) => `<option value="${p.id}" ${p.id === beforePhoto.id ? 'selected' : ''}>${formatDateBr(p.date)} (${p.weightKg}kg)</option>`)
+                    .join('')}
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Depois</label>
+                <select id="select-after-photo">
+                  ${photos
+                    .map((p) => `<option value="${p.id}" ${p.id === afterPhoto.id ? 'selected' : ''}>${formatDateBr(p.date)} (${p.weightKg}kg)</option>`)
+                    .join('')}
+                </select>
+              </div>
+            </div>
+
+            <button class="btn btn-gold btn-full btn-lg" id="btn-generate-story-card">
+              ✨ Gerar Card 9:16 para Stories
+            </button>
           `
-      }
-    </section>
-
-    <!-- Galeria de Check-ins -->
-    <section class="card">
-      <div class="card-header-flex">
-        <h3 class="card-title">Linha do Tempo de Fotos (${photos.length})</h3>
-        <span class="badge-sub">Armazenamento isolado por UID · Compressão automática</span>
-      </div>
-
-      ${
-        photos.length === 0
-          ? `<div class="empty-inline">Nenhuma foto enviada ainda. Clique em <strong>+ Nova Foto</strong> para iniciar sua linha do tempo.</div>`
-          : `<div class="photo-gallery-grid">
+        : photos.length === 0
+          ? `<div class="card empty-state-card">Nenhuma foto enviada ainda.</div>`
+          : `
+            <div class="gallery-mobile-grid">
               ${photos
                 .slice()
                 .reverse()
                 .map(
                   (p) => `
                   <div class="gallery-card">
-                    <img src="${p.dataUrl}" alt="Check-in ${formatDateBr(p.date)}" />
+                    <img src="${p.dataUrl}" alt="Foto ${formatDateBr(p.date)}" />
                     <div class="gallery-info">
                       <div class="gallery-top">
                         <strong>${p.weightKg} kg</strong>
-                        <span class="pill pill-neutral">${escapeHtml(p.pose)}</span>
+                        <span class="pill pill-neutral pill-xs">${escapeHtml(p.pose)}</span>
                       </div>
-                      <div class="gallery-date">${formatDateBr(p.date)}${p.bodyFatPct ? ` · ${p.bodyFatPct}% BF` : ''}</div>
-                      ${p.note ? `<p class="gallery-note">${escapeHtml(p.note)}</p>` : ''}
+                      <div class="gallery-date">${formatDateBr(p.date)}</div>
                       <button class="btn-link-danger" data-del-photo="${p.id}">Excluir</button>
                     </div>
                   </div>
                 `
                 )
                 .join('')}
-            </div>`
-      }
-    </section>
+            </div>
+          `
+    }
   `;
 
   bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto);
 }
 
-function renderPhotoGuideCard() {
-  return `
-    <section class="card guide-card mb-24">
-      <h3 class="card-title">📷 Guia Prático de Fotos de Evolução (Padrão Profissional)</h3>
-      <div class="guide-grid">
-        <div class="guide-step">
-          <strong>1. Mesmo Horário (Jejum Matinal)</strong>
-          <p>Tire as fotos ao acordar, após ir ao banheiro e antes de comer/beber. Elimina variação de retenção hídrica.</p>
-        </div>
-        <div class="guide-step">
-          <strong>2. Iluminação Consistente</strong>
-          <p>Use luz superior ou frontal suave no mesmo cômodo. Evite contraluz de janela que escurece a definição muscular.</p>
-        </div>
-        <div class="guide-step">
-          <strong>3. Distância & Altura da Câmera</strong>
-          <p>Apoie o celular a cerca de 2 metros na altura do umbigo (ou use temporizador de 10s). Sem ângulos de cima/baixo.</p>
-        </div>
-        <div class="guide-step">
-          <strong>4. 3 Ângulos Padrão + Mesma Roupa</strong>
-          <p>Registre <strong>Frente</strong>, <strong>Lateral</strong> e <strong>Costas</strong> relaxado e contraído usando a mesma roupa a cada 14–30 dias.</p>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
 function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
-  container.querySelector('#btn-toggle-photo-guide')?.addEventListener('click', () => {
-    showGuide = !showGuide;
+  container.querySelectorAll('[data-eview]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      evoView = btn.dataset.eview;
+      renderEvolutionTab(container, ctx);
+    });
+  });
+
+  container.querySelector('#btn-toggle-cmode')?.addEventListener('click', () => {
+    compareMode = compareMode === 'side' ? 'slider' : 'side';
     renderEvolutionTab(container, ctx);
   });
 
-  container.querySelectorAll('[data-cmode]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      compareMode = btn.dataset.cmode;
-      renderEvolutionTab(container, ctx);
-    });
+  container.querySelector('#btn-open-photo-guide')?.addEventListener('click', () => {
+    ctx.openModal(
+      '📷 Guia Prático de Fotos',
+      `
+        <div class="stack-10">
+          <div class="guide-step">
+            <strong>1. Jejum Matinal</strong>
+            <p>Tire sempre ao acordar, antes de comer ou beber água, para eliminar retenção.</p>
+          </div>
+          <div class="guide-step">
+            <strong>2. Mesma Iluminação</strong>
+            <p>Luz superior/frontal suave no mesmo local. Evite contraluz de janela.</p>
+          </div>
+          <div class="guide-step">
+            <strong>3. Distância & Altura</strong>
+            <p>Apoie o celular a ~2m na altura do umbigo usando temporizador de 10s.</p>
+          </div>
+          <div class="guide-step">
+            <strong>4. 3 Ângulos Padrão</strong>
+            <p>Frente, Lateral e Costas com a mesma roupa a cada 14 a 30 dias.</p>
+          </div>
+        </div>
+      `
+    );
   });
 
   container.querySelector('#select-before-photo')?.addEventListener('change', (e) => {
@@ -316,62 +267,58 @@ function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
     });
   }
 
-  // Excluir foto
   container.querySelectorAll('[data-del-photo]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.delPhoto;
-      ctx.data.evolutionPhotos = (ctx.data.evolutionPhotos || []).filter((p) => p.id !== id);
+      ctx.data.evolutionPhotos = (ctx.data.evolutionPhotos || []).filter((p) => p.id !== btn.dataset.delPhoto);
       ctx.saveData();
-      ctx.toast('Foto removida da linha do tempo.');
+      ctx.toast('Foto excluída.');
       renderEvolutionTab(container, ctx);
     });
   });
 
-  // Upload nova foto com compressão Canvas
   container.querySelector('#btn-upload-photo')?.addEventListener('click', () => {
     const today = new Date().toISOString().slice(0, 10);
     const defaultW = ctx.data.bodyProfile?.weightKg || 75;
     const defaultBf = ctx.data.bodyProfile?.bodyFatPct || '';
 
     ctx.openModal(
-      'Novo Check-in de Evolução Física',
+      'Nova Foto de Evolução',
       `
         <form id="form-upload-photo" class="modal-form">
           <div class="form-field">
-            <label>Selecionar Foto (Compressão Automática)</label>
+            <label>Foto (Compressão Automática)</label>
             <input type="file" name="photo" accept="image/*" required />
           </div>
           <div class="form-grid-2">
             <div class="form-field">
-              <label>Data da Foto</label>
+              <label>Data</label>
               <input type="date" name="date" required value="${today}" />
             </div>
             <div class="form-field">
-              <label>Pose / Ângulo</label>
+              <label>Pose</label>
               <select name="pose">
                 <option value="Frente">Frente</option>
                 <option value="Lateral">Lateral</option>
                 <option value="Costas">Costas</option>
                 <option value="Duplo Bíceps">Duplo Bíceps</option>
-                <option value="Livre">Livre</option>
               </select>
             </div>
           </div>
           <div class="form-grid-2">
             <div class="form-field">
-              <label>Peso no Dia (kg)</label>
+              <label>Peso (kg)</label>
               <input type="number" step="0.1" name="weightKg" required value="${defaultW}" />
             </div>
             <div class="form-field">
-              <label>% Gordura (Opcional)</label>
-              <input type="number" step="0.1" name="bodyFatPct" placeholder="Ex: 14.5" value="${defaultBf}" />
+              <label>% Gordura (Opc.)</label>
+              <input type="number" step="0.1" name="bodyFatPct" value="${defaultBf}" />
             </div>
           </div>
           <div class="form-field">
-            <label>Observação (Opcional)</label>
-            <input type="text" name="note" placeholder="Ex: Semana 8 — Jejum matinal" />
+            <label>Nota (Opcional)</label>
+            <input type="text" name="note" placeholder="Ex: Semana 8 em jejum" />
           </div>
-          <button type="submit" class="btn btn-emerald btn-full">Comprimir & Salvar Foto (+40 pts)</button>
+          <button type="submit" class="btn btn-emerald btn-full">Salvar Foto (+40 pts)</button>
         </form>
       `,
       (modalBody) => {
@@ -379,8 +326,7 @@ function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
           e.preventDefault();
           const fd = new FormData(e.target);
           const file = fd.get('photo');
-          if (!file || !file.size) return ctx.toast('Selecione uma imagem.', 'error');
-
+          if (!file || !file.size) return ctx.toast('Escolha uma foto.', 'error');
           try {
             const dataUrl = await compressImageFile(file, 1080, 0.78);
             const newPhoto = {
@@ -399,17 +345,16 @@ function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
             selectedAfterId = newPhoto.id;
             ctx.closeModal();
             ctx.refreshHeader();
-            ctx.toast('Foto comprimida e salva! +40 pts no Score!', 'success');
+            ctx.toast('Foto salva! +40 pts!', 'success');
             renderEvolutionTab(container, ctx);
           } catch (err) {
-            ctx.toast(err.message || 'Erro ao processar imagem.', 'error');
+            ctx.toast(err.message || 'Erro ao processar foto.', 'error');
           }
         });
       }
     );
   });
 
-  // Gerar Card 9:16 (1080x1920) em Canvas
   container.querySelector('#btn-generate-story-card')?.addEventListener('click', async () => {
     if (!beforePhoto || !afterPhoto) return;
     try {
@@ -422,28 +367,21 @@ function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
       const previewUrl = canvas.toDataURL('image/png', 0.92);
 
       ctx.openModal(
-        'Card 9:16 (1080×1920) — Instagram Stories',
+        'Card 9:16 — Instagram Stories',
         `
           <div class="story-modal-wrap">
-            <img src="${previewUrl}" alt="Preview Card 9:16" class="story-preview-img" />
+            <img src="${previewUrl}" alt="Card 9:16" class="story-preview-img" />
             <div class="story-modal-actions">
-              <button class="btn btn-gold btn-full" id="btn-story-share">
-                📤 Compartilhar nos Stories (Web Share)
-              </button>
-              <button class="btn btn-emerald btn-full" id="btn-story-download">
-                ⬇ Baixar PNG Alta Resolução (1080×1920)
-              </button>
+              <button class="btn btn-gold btn-full" id="btn-story-share">📤 Compartilhar nos Stories</button>
+              <button class="btn btn-emerald btn-full" id="btn-story-download">⬇ Baixar PNG (1080×1920)</button>
             </div>
           </div>
         `,
         (modalBody) => {
           modalBody.querySelector('#btn-story-share')?.addEventListener('click', async () => {
             const res = await shareOrDownloadStoryCard(canvas);
-            if (res.method === 'web_share') {
-              ctx.toast('Card enviado para compartilhamento!', 'success');
-            } else if (res.method === 'download') {
-              ctx.toast('Navegador sem Web Share de arquivos: PNG baixado automaticamente!', 'success');
-            }
+            if (res.method === 'web_share') ctx.toast('Card enviado!', 'success');
+            else if (res.method === 'download') ctx.toast('PNG baixado automaticamente!', 'success');
           });
           modalBody.querySelector('#btn-story-download')?.addEventListener('click', () => {
             downloadCanvasPng(canvas);
@@ -451,9 +389,8 @@ function bindEvolutionEvents(container, ctx, beforePhoto, afterPhoto) {
           });
         }
       );
-    } catch (err) {
-      console.error(err);
-      ctx.toast('Não foi possível gerar o Card 9:16.', 'error');
+    } catch {
+      ctx.toast('Erro ao gerar Card 9:16.', 'error');
     }
   });
 }

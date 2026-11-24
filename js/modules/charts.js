@@ -1,9 +1,9 @@
 /**
- * Piff Paff Gym — Gráficos Interativos (Chart.js)
- *  1. Histórico de Cargas (Carga Inicial, PR Atual, % de Ganho)
- *  2. Peso Corporal vs. Meta + IMC + % de Gordura (Manual / Fita Métrica US Navy — SEM balanças inteligentes)
+ * Piff Paff Gym — Gráficos Interativos (Chart.js — Estilo Mobile Minimalista)
+ * Sub-telas separadas: [Histórico de Cargas] | [Peso, IMC & BF%] (SEM balanças inteligentes)
  */
 
+let chartView = 'loads'; // 'loads' | 'weight'
 let loadChartInstance = null;
 let weightChartInstance = null;
 let selectedExerciseName = '';
@@ -37,30 +37,23 @@ export function calculateBmi(weightKg, heightCm) {
   const w = Number(weightKg) || 0;
   const h = (Number(heightCm) || 0) / 100;
   if (w <= 0 || h <= 0) return { value: 0, label: '—', tone: 'neutral' };
-  const bmi = w / (h * h);
-  const rounded = Math.round(bmi * 10) / 10;
+  const bmi = Math.round((w / (h * h)) * 10) / 10;
 
-  let label = 'Peso Saudável';
+  let label = 'Faixa Saudável';
   let tone = 'emerald';
-  if (rounded < 18.5) {
+  if (bmi < 18.5) {
     label = 'Abaixo do Peso';
     tone = 'gold';
-  } else if (rounded < 25) {
-    label = 'Faixa Saudável';
-    tone = 'emerald';
-  } else if (rounded < 30) {
+  } else if (bmi >= 25 && bmi < 30) {
     label = 'Sobrepeso / Massa Atlética';
     tone = 'gold';
-  } else {
-    label = 'Obesidade / Atenção';
+  } else if (bmi >= 30) {
+    label = 'Atenção';
     tone = 'danger';
   }
-  return { value: rounded, label, tone };
+  return { value: bmi, label, tone };
 }
 
-/**
- * Fórmula US Navy (fita métrica manual — sem balanças inteligentes)
- */
 export function calculateUsNavyBf({ gender, heightCm, neckCm, waistCm, hipCm }) {
   const h = Number(heightCm);
   const n = Number(neckCm);
@@ -92,7 +85,6 @@ export function renderChartsTab(container, ctx) {
   const activeSeries = selectedExerciseName ? loadHistory[selectedExerciseName] || [] : [];
   const initialLoad = activeSeries.length ? Number(activeSeries[0].weightKg) : 0;
   const prLoad = activeSeries.length ? Math.max(...activeSeries.map((e) => Number(e.weightKg) || 0)) : 0;
-  const latestLoad = activeSeries.length ? Number(activeSeries[activeSeries.length - 1].weightKg) : 0;
   const gainPct =
     initialLoad > 0 ? Math.round(((prLoad - initialLoad) / initialLoad) * 1000) / 10 : prLoad > 0 ? 100 : 0;
 
@@ -100,117 +92,88 @@ export function renderChartsTab(container, ctx) {
   const weightHist = [...(data.weightHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
   const latestWeight = weightHist.length ? Number(weightHist[weightHist.length - 1].weightKg) : Number(body.weightKg);
   const bmi = calculateBmi(latestWeight, body.heightCm);
-  const diffToGoal = Math.round((latestWeight - Number(body.goalWeightKg || latestWeight)) * 10) / 10;
 
   container.innerHTML = `
-    <div class="section-header-row">
-      <div>
-        <h2 class="section-title">Gráficos & Métricas Corporais</h2>
-        <p class="section-subtitle">Histórico interativo de cargas (Inicial, PR e % de ganho) e evolução de Peso vs. Meta, IMC e % de Gordura.</p>
-      </div>
+    <div class="segmented-control full-seg mb-16">
+      <button class="seg-btn ${chartView === 'loads' ? 'active' : ''}" data-chview="loads">Cargas & PR</button>
+      <button class="seg-btn ${chartView === 'weight' ? 'active' : ''}" data-chview="weight">Peso, IMC & BF%</button>
     </div>
 
-    <!-- 1. HISTÓRICO DE CARGAS -->
-    <section class="card mb-24">
-      <div class="card-header-flex">
-        <div>
-          <h3 class="card-title">📈 Histórico de Cargas</h3>
-          <p class="card-sub">Acompanhe sua sobrecarga progressiva e recordes pessoais (PR).</p>
-        </div>
-        <button class="btn btn-sm btn-emerald" id="btn-log-load-manual">+ Registrar Carga</button>
-      </div>
+    ${
+      chartView === 'loads'
+        ? `
+          <button class="btn btn-emerald btn-full mb-16" id="btn-log-load-manual">+ Registrar Carga</button>
+          ${
+            exerciseNames.length === 0
+              ? `<div class="card empty-state-card">Conclua um treino ou registre uma carga para ver o gráfico.</div>`
+              : `
+                <div class="form-field mb-12">
+                  <label>Exercício</label>
+                  <select id="chart-exercise-select">
+                    ${exerciseNames
+                      .map((name) => `<option value="${escapeHtml(name)}" ${name === selectedExerciseName ? 'selected' : ''}>${escapeHtml(name)}</option>`)
+                      .join('')}
+                  </select>
+                </div>
 
-      ${
-        exerciseNames.length === 0
-          ? `<div class="empty-inline">Finalize um treino ou clique em <strong>+ Registrar Carga</strong> para visualizar o gráfico de evolução de força.</div>`
-          : `
-            <div class="form-field max-w-420 mb-16">
-              <label>Exercício</label>
-              <select id="chart-exercise-select">
-                ${exerciseNames
-                  .map(
-                    (name) =>
-                      `<option value="${escapeHtml(name)}" ${name === selectedExerciseName ? 'selected' : ''}>${escapeHtml(name)} (${loadHistory[name].length} reg.)</option>`
-                  )
-                  .join('')}
-              </select>
+                <div class="kpi-grid-3 mb-16">
+                  <div class="kpi-card">
+                    <span class="kpi-label">Inicial</span>
+                    <strong class="kpi-val-sm">${initialLoad} kg</strong>
+                  </div>
+                  <div class="kpi-card kpi-gold">
+                    <span class="kpi-label">PR Atual</span>
+                    <strong class="kpi-val-sm text-gold">${prLoad} kg</strong>
+                  </div>
+                  <div class="kpi-card kpi-emerald">
+                    <span class="kpi-label">Ganho</span>
+                    <strong class="kpi-val-sm text-emerald">${gainPct >= 0 ? '+' : ''}${gainPct}%</strong>
+                  </div>
+                </div>
+
+                <section class="card">
+                  <div class="chart-canvas-box">
+                    <canvas id="canvas-load-chart"></canvas>
+                  </div>
+                </section>
+              `
+          }
+        `
+        : `
+          <div class="action-pair-row mb-16">
+            <button class="btn btn-emerald flex-1" id="btn-log-weight">+ Registrar Peso</button>
+            <button class="btn btn-ghost" id="btn-bf-calculator">📏 Fita BF%</button>
+          </div>
+
+          <div class="kpi-grid-2 mb-16">
+            <div class="kpi-card">
+              <span class="kpi-label">Peso Atual</span>
+              <strong class="kpi-val-sm">${latestWeight.toFixed(1)} kg</strong>
+              <span class="kpi-note">Meta: ${Number(body.goalWeightKg || latestWeight).toFixed(1)} kg</span>
             </div>
-
-            <div class="kpi-grid-4 mb-16">
-              <div class="kpi-card">
-                <span class="kpi-label">Carga Inicial</span>
-                <strong class="kpi-val">${initialLoad} kg</strong>
-              </div>
-              <div class="kpi-card kpi-gold">
-                <span class="kpi-label">Recorde Pessoal (PR)</span>
-                <strong class="kpi-val text-gold">${prLoad} kg</strong>
-              </div>
-              <div class="kpi-card kpi-emerald">
-                <span class="kpi-label">% de Ganho</span>
-                <strong class="kpi-val text-emerald">${gainPct >= 0 ? '+' : ''}${gainPct}%</strong>
-              </div>
-              <div class="kpi-card">
-                <span class="kpi-label">Último Registro</span>
-                <strong class="kpi-val">${latestLoad} kg</strong>
-              </div>
+            <div class="kpi-card">
+              <span class="kpi-label">IMC (${body.heightCm}cm)</span>
+              <strong class="kpi-val-sm">${bmi.value}</strong>
+              <span class="kpi-note ${bmi.tone === 'emerald' ? 'text-emerald' : 'text-gold'}">${bmi.label}</span>
             </div>
+            <div class="kpi-card kpi-gold" style="grid-column: span 2;">
+              <span class="kpi-label">% de Gordura Corporal (Manual / US Navy)</span>
+              <strong class="kpi-val-sm text-gold">${body.bodyFatPct ? `${body.bodyFatPct}%` : 'Não informado'}</strong>
+            </div>
+          </div>
 
+          <section class="card">
             <div class="chart-canvas-box">
-              <canvas id="canvas-load-chart"></canvas>
+              <canvas id="canvas-weight-chart"></canvas>
             </div>
-          `
-      }
-    </section>
-
-    <!-- 2. PESO CORPORAL VS META + IMC + % GORDURA -->
-    <section class="card">
-      <div class="card-header-flex">
-        <div>
-          <h3 class="card-title">⚖️ Peso Corporal vs. Meta · IMC · % Gordura</h3>
-          <p class="card-sub">Registro manual confiável + cálculo de IMC e % de gordura por fita métrica (US Navy).</p>
-        </div>
-        <div class="header-action-group">
-          <button class="btn btn-sm btn-ghost" id="btn-bf-calculator">📏 Calcular BF% (Fita)</button>
-          <button class="btn btn-sm btn-emerald" id="btn-log-weight">+ Registrar Peso</button>
-        </div>
-      </div>
-
-      <div class="kpi-grid-4 mb-16">
-        <div class="kpi-card">
-          <span class="kpi-label">Peso Atual</span>
-          <strong class="kpi-val">${latestWeight.toFixed(1)} kg</strong>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Meta de Peso</span>
-          <strong class="kpi-val text-emerald">${Number(body.goalWeightKg || latestWeight).toFixed(1)} kg</strong>
-          <span class="kpi-note">${diffToGoal === 0 ? 'Na meta!' : diffToGoal > 0 ? `Faltam -${diffToGoal.toFixed(1)} kg` : `Faltam +${Math.abs(diffToGoal).toFixed(1)} kg`}</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-label">IMC (${body.heightCm} cm)</span>
-          <strong class="kpi-val">${bmi.value}</strong>
-          <span class="kpi-note ${bmi.tone === 'emerald' ? 'text-emerald' : bmi.tone === 'gold' ? 'text-gold' : ''}">${bmi.label}</span>
-        </div>
-        <div class="kpi-card kpi-gold">
-          <span class="kpi-label">% de Gordura (BF)</span>
-          <strong class="kpi-val text-gold">${body.bodyFatPct ? `${body.bodyFatPct}%` : '—'}</strong>
-          <span class="kpi-note">${body.bodyFatPct ? 'Estimativa corporal' : 'Use fita ou informe manual'}</span>
-        </div>
-      </div>
-
-      <div class="chart-canvas-box">
-        <canvas id="canvas-weight-chart"></canvas>
-      </div>
-    </section>
+          </section>
+        `
+    }
   `;
 
-  // Renderizar Chart.js
   if (typeof window.Chart !== 'undefined') {
-    if (activeSeries.length > 0) {
-      renderLoadChart(activeSeries);
-    }
-    if (weightHist.length > 0) {
-      renderWeightChart(weightHist, Number(body.goalWeightKg || latestWeight));
-    }
+    if (chartView === 'loads' && activeSeries.length > 0) renderLoadChart(activeSeries);
+    if (chartView === 'weight' && weightHist.length > 0) renderWeightChart(weightHist, Number(body.goalWeightKg || latestWeight));
   }
 
   bindChartsEvents(container, ctx);
@@ -220,7 +183,7 @@ function renderLoadChart(series) {
   const el = document.getElementById('canvas-load-chart');
   if (!el) return;
   const ctx2d = el.getContext('2d');
-  const grad = ctx2d.createLinearGradient(0, 0, 0, 260);
+  const grad = ctx2d.createLinearGradient(0, 0, 0, 240);
   grad.addColorStop(0, 'rgba(16, 185, 129, 0.34)');
   grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
@@ -239,7 +202,6 @@ function renderLoadChart(series) {
           pointBorderColor: '#09090b',
           pointBorderWidth: 2,
           pointRadius: 5,
-          pointHoverRadius: 7,
           fill: true,
           tension: 0.32,
         },
@@ -248,33 +210,10 @@ function renderLoadChart(series) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#121215',
-          titleColor: '#ffffff',
-          bodyColor: '#10b981',
-          borderColor: 'rgba(255,255,255,0.12)',
-          borderWidth: 1,
-          padding: 12,
-          callbacks: {
-            label: (c) => ` ${c.parsed.y} kg`,
-          },
-        },
-      },
+      plugins: { legend: { display: false } },
       scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: '#a1a1aa', font: { family: 'Inter' } },
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: {
-            color: '#a1a1aa',
-            font: { family: 'Inter' },
-            callback: (v) => `${v} kg`,
-          },
-        },
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa' } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#a1a1aa', callback: (v) => `${v}kg` } },
       },
     },
   });
@@ -284,7 +223,7 @@ function renderWeightChart(weightHist, goalWeight) {
   const el = document.getElementById('canvas-weight-chart');
   if (!el) return;
   const ctx2d = el.getContext('2d');
-  const grad = ctx2d.createLinearGradient(0, 0, 0, 260);
+  const grad = ctx2d.createLinearGradient(0, 0, 0, 240);
   grad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
   grad.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
 
@@ -294,24 +233,22 @@ function renderWeightChart(weightHist, goalWeight) {
       labels: weightHist.map((w) => formatDateShort(w.date)),
       datasets: [
         {
-          label: 'Peso Corporal (kg)',
+          label: 'Peso (kg)',
           data: weightHist.map((w) => Number(w.weightKg)),
           borderColor: '#f59e0b',
           backgroundColor: grad,
           borderWidth: 3,
           pointBackgroundColor: '#f59e0b',
-          pointBorderColor: '#09090b',
-          pointBorderWidth: 2,
           pointRadius: 5,
           fill: true,
           tension: 0.3,
         },
         {
-          label: `Meta (${goalWeight} kg)`,
+          label: `Meta (${goalWeight}kg)`,
           data: weightHist.map(() => goalWeight),
           borderColor: '#10b981',
           borderWidth: 2,
-          borderDash: [8, 6],
+          borderDash: [7, 5],
           pointRadius: 0,
           fill: false,
         },
@@ -321,54 +258,39 @@ function renderWeightChart(weightHist, goalWeight) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: true,
-          labels: { color: '#d4d4d8', font: { family: 'Inter', size: 12 }, boxWidth: 14 },
-        },
-        tooltip: {
-          backgroundColor: '#121215',
-          titleColor: '#ffffff',
-          bodyColor: '#f4f4f5',
-          borderColor: 'rgba(255,255,255,0.12)',
-          borderWidth: 1,
-          padding: 12,
-        },
+        legend: { display: true, labels: { color: '#d4d4d8', boxWidth: 12 } },
       },
       scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: '#a1a1aa', font: { family: 'Inter' } },
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: {
-            color: '#a1a1aa',
-            font: { family: 'Inter' },
-            callback: (v) => `${v} kg`,
-          },
-        },
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa' } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#a1a1aa', callback: (v) => `${v}kg` } },
       },
     },
   });
 }
 
 function bindChartsEvents(container, ctx) {
+  container.querySelectorAll('[data-chview]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      chartView = btn.dataset.chview;
+      renderChartsTab(container, ctx);
+    });
+  });
+
   container.querySelector('#chart-exercise-select')?.addEventListener('change', (e) => {
     selectedExerciseName = e.target.value;
     renderChartsTab(container, ctx);
   });
 
-  // Registrar carga manual
   container.querySelector('#btn-log-load-manual')?.addEventListener('click', () => {
     const today = new Date().toISOString().slice(0, 10);
     const existingNames = Object.keys(ctx.data.loadHistory || {});
     ctx.openModal(
-      'Registrar Carga de Exercício',
+      'Registrar Carga',
       `
         <form id="form-manual-load" class="modal-form">
           <div class="form-field">
-            <label>Nome do Exercício</label>
-            <input type="text" name="exercise" list="datalist-exercises" required value="${escapeHtml(selectedExerciseName)}" placeholder="Ex: Supino Reto com Barra" />
+            <label>Exercício</label>
+            <input type="text" name="exercise" list="datalist-exercises" required value="${escapeHtml(selectedExerciseName)}" />
             <datalist id="datalist-exercises">
               ${existingNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}
             </datalist>
@@ -383,7 +305,7 @@ function bindChartsEvents(container, ctx) {
               <input type="date" name="date" required value="${today}" />
             </div>
           </div>
-          <button type="submit" class="btn btn-emerald btn-full">Salvar no Histórico</button>
+          <button type="submit" class="btn btn-emerald btn-full">Salvar</button>
         </form>
       `,
       (modalBody) => {
@@ -391,29 +313,26 @@ function bindChartsEvents(container, ctx) {
           e.preventDefault();
           const fd = new FormData(e.target);
           const exName = String(fd.get('exercise')).trim();
-          const w = Number(fd.get('weightKg'));
-          const date = fd.get('date');
           if (!exName) return;
           if (!ctx.data.loadHistory) ctx.data.loadHistory = {};
           if (!ctx.data.loadHistory[exName]) ctx.data.loadHistory[exName] = [];
-          ctx.data.loadHistory[exName].push({ date, weightKg: w });
+          ctx.data.loadHistory[exName].push({ date: fd.get('date'), weightKg: Number(fd.get('weightKg')) });
           ctx.data.loadHistory[exName].sort((a, b) => a.date.localeCompare(b.date));
           selectedExerciseName = exName;
           ctx.saveData();
           ctx.closeModal();
-          ctx.toast('Carga registrada no gráfico!', 'success');
+          ctx.toast('Carga registrada!', 'success');
           renderChartsTab(container, ctx);
         });
       }
     );
   });
 
-  // Registrar Peso + Meta + Altura + BF% manual
   container.querySelector('#btn-log-weight')?.addEventListener('click', () => {
     const today = new Date().toISOString().slice(0, 10);
     const body = ctx.data.bodyProfile || {};
     ctx.openModal(
-      'Registrar Peso Corporal & Meta',
+      'Registrar Peso & Meta',
       `
         <form id="form-log-weight" class="modal-form">
           <div class="form-grid-2">
@@ -428,19 +347,19 @@ function bindChartsEvents(container, ctx) {
           </div>
           <div class="form-grid-3">
             <div class="form-field">
-              <label>Meta de Peso (kg)</label>
+              <label>Meta (kg)</label>
               <input type="number" step="0.1" name="goalWeightKg" required value="${body.goalWeightKg || 75}" />
             </div>
             <div class="form-field">
               <label>Altura (cm)</label>
-              <input type="number" step="1" name="heightCm" required value="${body.heightCm || 175}" />
+              <input type="number" name="heightCm" required value="${body.heightCm || 175}" />
             </div>
             <div class="form-field">
-              <label>% Gordura (Opc.)</label>
-              <input type="number" step="0.1" name="bodyFatPct" value="${body.bodyFatPct ?? ''}" placeholder="Ex: 15.0" />
+              <label>BF% (Opc.)</label>
+              <input type="number" step="0.1" name="bodyFatPct" value="${body.bodyFatPct ?? ''}" />
             </div>
           </div>
-          <button type="submit" class="btn btn-emerald btn-full">Atualizar Peso & Gráfico</button>
+          <button type="submit" class="btn btn-emerald btn-full">Salvar</button>
         </form>
       `,
       (modalBody) => {
@@ -451,45 +370,36 @@ function bindChartsEvents(container, ctx) {
           const gw = Number(fd.get('goalWeightKg'));
           const h = Number(fd.get('heightCm'));
           const bf = fd.get('bodyFatPct') ? Number(fd.get('bodyFatPct')) : ctx.data.bodyProfile.bodyFatPct;
-          const date = fd.get('date');
-
           ctx.data.bodyProfile.weightKg = w;
           ctx.data.bodyProfile.goalWeightKg = gw;
           ctx.data.bodyProfile.heightCm = h;
           ctx.data.bodyProfile.bodyFatPct = bf;
-
           ctx.data.weightHistory = [
             ...(ctx.data.weightHistory || []),
-            { id: `wh_${Date.now()}`, date, weightKg: w, bodyFatPct: bf, note: 'Check-in manual' },
+            { id: `wh_${Date.now()}`, date: fd.get('date'), weightKg: w, bodyFatPct: bf, note: 'Check-in' },
           ].sort((a, b) => a.date.localeCompare(b.date));
-
-          // Sincronizar metas de peso (inclusive metas inversas)
           for (const g of ctx.data.goals || []) {
-            if (!g.completed && g.category === 'peso' && g.unit === 'kg') {
-              g.currentValue = w;
-            }
+            if (!g.completed && g.category === 'peso' && g.unit === 'kg') g.currentValue = w;
           }
-
           ctx.updateUserProfile({ weightKg: w, heightCm: h, goalWeightKg: gw });
           ctx.saveData();
           ctx.closeModal();
-          ctx.toast('Peso corporal atualizado!', 'success');
+          ctx.toast('Peso atualizado!', 'success');
           renderChartsTab(container, ctx);
         });
       }
     );
   });
 
-  // Calculadora % Gordura US Navy (Fita Métrica)
   container.querySelector('#btn-bf-calculator')?.addEventListener('click', () => {
     const body = ctx.data.bodyProfile || {};
     ctx.openModal(
-      'Calculadora de % de Gordura (Fita Métrica US Navy)',
+      'Calcular BF% (Fita Métrica US Navy)',
       `
         <form id="form-bf-navy" class="modal-form">
           <div class="form-grid-2">
             <div class="form-field">
-              <label>Sexo Biológico</label>
+              <label>Sexo</label>
               <select name="gender" id="bf-gender-select">
                 <option value="male" ${body.gender !== 'female' ? 'selected' : ''}>Masculino</option>
                 <option value="female" ${body.gender === 'female' ? 'selected' : ''}>Feminino</option>
@@ -502,28 +412,25 @@ function bindChartsEvents(container, ctx) {
           </div>
           <div class="form-grid-3">
             <div class="form-field">
-              <label>Pescoço (cm)</label>
+              <label>Pescoço</label>
               <input type="number" step="0.5" name="neckCm" required value="${body.neckCm || 38}" />
             </div>
             <div class="form-field">
-              <label>Cintura (cm)</label>
+              <label>Cintura</label>
               <input type="number" step="0.5" name="waistCm" required value="${body.waistCm || 82}" />
             </div>
             <div class="form-field" id="bf-hip-field" style="${body.gender === 'female' ? '' : 'opacity:0.45'}">
-              <label>Quadril (cm · Fem)</label>
+              <label>Quadril</label>
               <input type="number" step="0.5" name="hipCm" value="${body.hipCm || 96}" />
             </div>
           </div>
-          <button type="submit" class="btn btn-gold btn-full">Calcular & Salvar BF%</button>
+          <button type="submit" class="btn btn-gold btn-full">Calcular & Salvar</button>
         </form>
       `,
       (modalBody) => {
         const gSel = modalBody.querySelector('#bf-gender-select');
         const hipBox = modalBody.querySelector('#bf-hip-field');
-        gSel.addEventListener('change', () => {
-          hipBox.style.opacity = gSel.value === 'female' ? '1' : '0.45';
-        });
-
+        gSel.addEventListener('change', () => (hipBox.style.opacity = gSel.value === 'female' ? '1' : '0.45'));
         modalBody.querySelector('#form-bf-navy').addEventListener('submit', (e) => {
           e.preventDefault();
           const fd = new FormData(e.target);
@@ -534,14 +441,12 @@ function bindChartsEvents(container, ctx) {
             waistCm: Number(fd.get('waistCm')),
             hipCm: Number(fd.get('hipCm')),
           };
-          const result = calculateUsNavyBf(payload);
-          if (result === null) {
-            return ctx.toast('Verifique as medidas (cintura deve ser maior que pescoço).', 'error');
-          }
-          Object.assign(ctx.data.bodyProfile, payload, { bodyFatPct: result });
+          const res = calculateUsNavyBf(payload);
+          if (res === null) return ctx.toast('Verifique as medidas informadas.', 'error');
+          Object.assign(ctx.data.bodyProfile, payload, { bodyFatPct: res });
           ctx.saveData();
           ctx.closeModal();
-          ctx.toast(`Gordura corporal estimada: ${result}% salva no perfil!`, 'success');
+          ctx.toast(`BF% estimado: ${res}%`, 'success');
           renderChartsTab(container, ctx);
         });
       }
