@@ -23,13 +23,16 @@ let executionLayout = 'focus'; // 'focus' (1 por vez didático) | 'list'
 let currentExIndex = 0;
 let selectedCustomId = null;
 
-// Cronômetro de descanso
+// Cronômetro de descanso preciso (endTimeMs) + Notificação Nativa + Alerta Visual/Sonoro
 let timerState = {
   totalSec: 60,
   remainingSec: 60,
+  endTimeMs: null,
   running: false,
   autoStart: true,
+  soundEnabled: true,
   intervalId: null,
+  activeExerciseName: '',
 };
 
 // Gerador Personalizado (2 passos limpos)
@@ -42,28 +45,140 @@ let builderDraft = {
   exercises: [],
 };
 
-function playTimerBeep() {
+let sharedAudioCtx = null;
+
+function unlockAudioContext() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    if (!AudioCtx) return null;
+    if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+function playTimerChime() {
+  if (!timerState.soundEnabled) return;
+  try {
+    const ctx = unlockAudioContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
-    [880, 1174.66].forEach((freq, i) => {
+    const notes = [880, 1108.73, 1318.51];
+    notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + i * 0.16);
-      gain.gain.setValueAtTime(0.14, now + i * 0.16);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.16 + 0.22);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.14);
+      gain.gain.setValueAtTime(0.001, now + i * 0.14);
+      gain.gain.linearRampToValueAtTime(0.22, now + i * 0.14 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.34);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now + i * 0.16);
-      osc.stop(now + i * 0.16 + 0.24);
+      osc.start(now + i * 0.14);
+      osc.stop(now + i * 0.14 + 0.36);
     });
-    if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
   } catch {
     // Silencioso se bloqueado
   }
+}
+
+function getNotificationStatus() {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+  return window.Notification.permission;
+}
+
+async function requestRestNotificationPermission(ctx) {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    ctx?.toast('Alerta visual e sonoro ativo! (Notificação push indisponível neste navegador)');
+    return false;
+  }
+  if (window.Notification.permission === 'granted') {
+    ctx?.toast('Notificações de descanso já estão ativas! 🔔', 'success');
+    return true;
+  }
+  if (window.Notification.permission === 'denied') {
+    ctx?.toast('Notificações bloqueadas no navegador. Ative nas permissões do site.', 'error');
+    return false;
+  }
+  try {
+    const perm = await window.Notification.requestPermission();
+    if (perm === 'granted') {
+      ctx?.toast('Notificações ativadas! Você será avisado quando o descanso acabar. 🔔', 'success');
+      return true;
+    }
+    ctx?.toast('Permissão não concedida — manteremos alerta visual + som + vibração.');
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+async function showSystemRestNotification(exName) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (window.Notification.permission !== 'granted') return;
+
+  const title = '⏱️ Descanso Finalizado — Piff Paff Gym';
+  const body = exName
+    ? `Hora da próxima série de ${exName}! Bora pra cima!`
+    : 'Tempo de descanso zerado! Hora da próxima série!';
+  const options = {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [220, 100, 220, 100, 320],
+    tag: 'piff-paff-rest-done',
+    renotify: true,
+  };
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && typeof reg.showNotification === 'function') {
+        await reg.showNotification(title, options);
+        return;
+      }
+    }
+    new window.Notification(title, options);
+  } catch {
+    // Banner visual in-app cobre o aviso
+  }
+}
+
+function showInAppRestDoneBanner(exName) {
+  const banner = document.getElementById('rest-done-banner');
+  if (!banner) return;
+  const sub = banner.querySelector('#rest-done-sub');
+  if (sub) {
+    sub.textContent = exName ? `Próxima série: ${exName}` : 'Hora da próxima série!';
+  }
+  banner.classList.remove('hidden');
+  requestAnimationFrame(() => banner.classList.add('show'));
+
+  const dismiss = () => {
+    banner.classList.remove('show');
+    setTimeout(() => banner.classList.add('hidden'), 260);
+  };
+
+  const okBtn = banner.querySelector('#btn-rest-done-ok');
+  const plusBtn = banner.querySelector('#btn-rest-done-plus30');
+  if (okBtn) okBtn.onclick = dismiss;
+  if (plusBtn) {
+    plusBtn.onclick = () => {
+      dismiss();
+      startRestTimer(30, exName);
+    };
+  }
+}
+
+function fireRestFinishedAlert() {
+  playTimerChime();
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate([220, 100, 220, 100, 320]);
+  }
+  showInAppRestDoneBanner(timerState.activeExerciseName);
+  showSystemRestNotification(timerState.activeExerciseName);
 }
 
 function formatTimer(sec) {
@@ -79,6 +194,7 @@ function stopTimerInterval() {
     timerState.intervalId = null;
   }
   timerState.running = false;
+  timerState.endTimeMs = null;
 }
 
 function updateTimerDom() {
@@ -100,26 +216,53 @@ function updateTimerDom() {
   }
 }
 
-export function startRestTimer(seconds) {
+function tickTimer() {
+  if (!timerState.running || !timerState.endTimeMs) return;
+  const msLeft = timerState.endTimeMs - Date.now();
+  const secLeft = Math.ceil(msLeft / 1000);
+  if (secLeft <= 0) {
+    timerState.remainingSec = 0;
+    stopTimerInterval();
+    updateTimerDom();
+    fireRestFinishedAlert();
+  } else {
+    timerState.remainingSec = secLeft;
+    updateTimerDom();
+  }
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && timerState.running) {
+      tickTimer();
+    }
+  });
+}
+
+export function startRestTimer(seconds, exerciseName = '') {
+  unlockAudioContext();
   stopTimerInterval();
+
+  const prevBanner = document.getElementById('rest-done-banner');
+  if (prevBanner) {
+    prevBanner.classList.remove('show');
+    prevBanner.classList.add('hidden');
+  }
+
+  if (exerciseName) timerState.activeExerciseName = exerciseName;
+
   if (typeof seconds === 'number' && seconds > 0) {
     timerState.totalSec = seconds;
     timerState.remainingSec = seconds;
   } else if (timerState.remainingSec <= 0) {
     timerState.remainingSec = timerState.totalSec;
   }
+
   timerState.running = true;
+  timerState.endTimeMs = Date.now() + timerState.remainingSec * 1000;
   updateTimerDom();
 
-  timerState.intervalId = setInterval(() => {
-    timerState.remainingSec -= 1;
-    if (timerState.remainingSec <= 0) {
-      timerState.remainingSec = 0;
-      stopTimerInterval();
-      playTimerBeep();
-    }
-    updateTimerDom();
-  }, 1000);
+  timerState.intervalId = setInterval(tickTimer, 500);
 }
 
 export function resetWorkoutRuntime() {
@@ -396,6 +539,13 @@ function renderActiveExecutionScreen(container, ctx, session) {
           </div>
         </div>
         <div class="compact-timer-right">
+          <button
+            id="btn-timer-notify"
+            class="timer-bell-btn ${getNotificationStatus() === 'granted' ? 'active' : ''}"
+            title="${getNotificationStatus() === 'granted' ? 'Notificação de descanso ativa' : 'Ativar notificação quando o descanso acabar'}"
+          >
+            ${getNotificationStatus() === 'granted' ? '🔔' : '🔕'}
+          </button>
           <label class="auto-mini" title="Auto-iniciar ao marcar série">
             <input type="checkbox" id="auto-timer-check" ${timerState.autoStart ? 'checked' : ''} />
             <span>Auto</span>
@@ -864,8 +1014,16 @@ function bindActiveExecutionEvents(container, ctx, session) {
     ctx.openSpotifyMiniPlayer();
   });
 
+  container.querySelector('#btn-timer-notify')?.addEventListener('click', async () => {
+    await requestRestNotificationPermission(ctx);
+    renderWorkoutsTab(container, ctx);
+  });
+
   container.querySelectorAll('[data-timer-preset]').forEach((btn) => {
-    btn.addEventListener('click', () => startRestTimer(Number(btn.dataset.timerPreset)));
+    btn.addEventListener('click', () => {
+      const curEx = session.exercises[currentExIndex];
+      startRestTimer(Number(btn.dataset.timerPreset), curEx?.name || '');
+    });
   });
 
   container.querySelector('#rest-timer-toggle')?.addEventListener('click', () => {
@@ -873,7 +1031,8 @@ function bindActiveExecutionEvents(container, ctx, session) {
       stopTimerInterval();
       updateTimerDom();
     } else {
-      startRestTimer();
+      const curEx = session.exercises[currentExIndex];
+      startRestTimer(null, curEx?.name || '');
     }
   });
 
@@ -930,7 +1089,7 @@ function bindActiveExecutionEvents(container, ctx, session) {
       if (!ex || !ex.sets[sIdx]) return;
       ex.sets[sIdx].done = !ex.sets[sIdx].done;
       if (ex.sets[sIdx].done && timerState.autoStart) {
-        startRestTimer(ex.restSec);
+        startRestTimer(ex.restSec, ex.name);
       }
       renderWorkoutsTab(container, ctx);
     });

@@ -2268,3 +2268,160 @@ body.theme-pro .back-btn {
   color: var(--text-secondary);
   line-height: 1.45;
 }
+
+/* ============================================================================
+   EFEITO LUMINOSO ESMERALDA NO ATLAS (PESSOA REAL) + NOTIFICAÇÃO DE DESCANSO
+   ============================================================================ */
+.atlas-stage-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.atlas-badge-glow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.18);
+}
+
+.atlas-touch-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.atlas-side-row {
+  margin-bottom: 10px;
+}
+
+.atlas-real-photo {
+  filter: contrast(1.06) brightness(0.92);
+}
+
+.atlas-svg-overlay {
+  mix-blend-mode: screen;
+}
+
+@keyframes muscleBreath {
+  0%, 100% {
+    fill-opacity: 0.72;
+    stroke-opacity: 1;
+  }
+  50% {
+    fill-opacity: 0.92;
+    stroke-opacity: 0.85;
+  }
+}
+
+.atlas-muscle-group.selected .atlas-muscle-path {
+  fill: url(#atlasMuscleGrad);
+  stroke: #6ee7b7;
+  stroke-width: 2.2;
+  filter: url(#atlasGlow);
+  animation: muscleBreath 2.2s ease-in-out infinite;
+}
+
+.atlas-muscle-pill.active {
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.26);
+}
+
+/* Botão Sino de Notificação na barra do cronômetro */
+.timer-bell-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: all var(--transition);
+}
+
+.timer-bell-btn.active {
+  background: var(--emerald-soft);
+  border-color: var(--emerald);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+/* Banner de Notificação de Descanso Finalizado (Estilo Dynamic Island / Push) */
+.rest-done-banner {
+  position: fixed;
+  top: calc(var(--impersonate-h) + 12px);
+  left: 50%;
+  transform: translate(-50%, -24px);
+  opacity: 0;
+  width: calc(100% - 24px);
+  max-width: 448px;
+  z-index: 1350;
+  background: rgba(15, 22, 20, 0.97);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid var(--emerald);
+  border-radius: 18px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(16, 185, 129, 0.32);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms ease;
+}
+
+.rest-done-banner.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.rest-done-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rest-done-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--emerald-soft);
+  border: 1px solid var(--emerald-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.rest-done-left strong {
+  display: block;
+  font-size: 14px;
+  color: #34d399;
+}
+
+.rest-done-left span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rest-done-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}

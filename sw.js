@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.1.0';
+const CACHE_NAME = 'piff-paff-gym-v2.2.0';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -93,6 +93,18 @@ self.addEventListener('fetch', (event) => {
         .catch(() => cached);
 
       return cached || networkFetch;
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
     })
   );
 });

@@ -326,11 +326,15 @@ export function renderAtlasTab(container, ctx) {
 
       <!-- Cartão Principal: Pessoa Real Interativa -->
       <section class="atlas-stage-card ${isPro ? 'atlas-pro' : ''} mb-16">
-        <div class="atlas-stage-header">
-          <span class="pill ${isPro ? 'pill-gold' : 'pill-emerald'} pill-xs">🧍 ATLAS INTERATIVO</span>
+        <div class="atlas-stage-top-row">
+          <span class="atlas-badge-glow">🧍 ATLAS INTERATIVO</span>
+          <span class="atlas-touch-label">Toque no Músculo</span>
+        </div>
+
+        <div class="atlas-side-row">
           <div class="atlas-side-toggle">
-            <button class="atlas-side-btn ${activeSide === 'front' ? 'active' : ''}" data-atlas-side="front">Frente</button>
-            <button class="atlas-side-btn ${activeSide === 'back' ? 'active' : ''}" data-atlas-side="back">Costas</button>
+            <button class="atlas-side-btn ${activeSide === 'front' ? 'active' : ''}" data-atlas-side="front">👤 Frente</button>
+            <button class="atlas-side-btn ${activeSide === 'back' ? 'active' : ''}" data-atlas-side="back">🔄 Costas</button>
           </div>
         </div>
 
@@ -348,10 +352,17 @@ export function renderAtlasTab(container, ctx) {
             aria-label="Mapa muscular interativo"
           >
             <defs>
-              <filter id="atlasGlow" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="3.5" result="blur" />
+              <linearGradient id="atlasMuscleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#6ee7b7" stop-opacity="0.88" />
+                <stop offset="50%" stop-color="#10b981" stop-opacity="0.72" />
+                <stop offset="100%" stop-color="#059669" stop-opacity="0.82" />
+              </linearGradient>
+              <filter id="atlasGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="5.5" result="softGlow" />
+                <feGaussianBlur stdDeviation="1.8" result="tightGlow" />
                 <feMerge>
-                  <feMergeNode in="blur" />
+                  <feMergeNode in="softGlow" />
+                  <feMergeNode in="tightGlow" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
