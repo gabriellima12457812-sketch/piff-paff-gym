@@ -2461,3 +2461,95 @@ body.theme-pro .back-btn {
   border-color: rgba(239, 68, 68, 0.38);
   color: #fca5a5;
 }
+
+/* ============================================================================
+   INTEGRAÇÃO VISUAL OFICIAL SPOTIFY (#1DB954)
+   ============================================================================ */
+.topbar-spotify-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(29, 185, 84, 0.14);
+  border: 1px solid rgba(29, 185, 84, 0.42);
+  color: #1db954;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.topbar-spotify-btn.active {
+  background: #1db954;
+  color: #09090b;
+  box-shadow: 0 0 16px rgba(29, 185, 84, 0.4);
+}
+
+.btn-spotify {
+  background: #1db954;
+  color: #06140b;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.spotify-brand-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spotify-logo-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(29, 185, 84, 0.16);
+  border: 1px solid rgba(29, 185, 84, 0.45);
+  color: #1db954;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spotify-embed-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(29, 185, 84, 0.32);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+}
+
+.spotify-embed-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.spotify-live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1db954;
+}
+
+.spotify-ext-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.sp-brand-icon,
+.mini-sp-brand {
+  color: #1db954;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spotify-mini-player {
+  border-color: rgba(29, 185, 84, 0.48);
+}

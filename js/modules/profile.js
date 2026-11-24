@@ -123,14 +123,37 @@ export function renderProfileTab(container, ctx) {
             : ''
         }
 
-        <button class="nav-row-card" id="btn-prof-install-pwa">
-          <div class="nav-row-icon icon-emerald">📲</div>
+        <button class="nav-row-card" id="btn-prof-edit">
+          <div class="nav-row-icon icon-neutral">✏️</div>
           <div class="nav-row-body">
-            <strong>Instalar Piff Paff Gym</strong>
-            <span>Adicionar à tela inicial (iOS & Android)</span>
+            <strong>Editar Meu Perfil</strong>
+            <span>Nome, peso (${Number(data.bodyProfile?.weightKg || user.weightKg || 75).toFixed(1)}kg), altura e meta</span>
           </div>
           <span class="nav-row-chevron">›</span>
         </button>
+
+        ${
+          !(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
+            ? `
+              <button class="nav-row-card" id="btn-prof-install-pwa">
+                <div class="nav-row-icon icon-emerald">📲</div>
+                <div class="nav-row-body">
+                  <strong>Instalar App no Celular</strong>
+                  <span>Usar como aplicativo nativo (iOS & Android)</span>
+                </div>
+                <span class="nav-row-chevron">›</span>
+              </button>
+            `
+            : `
+              <div class="nav-row-card" style="opacity:0.8;cursor:default;">
+                <div class="nav-row-icon icon-emerald">✓</div>
+                <div class="nav-row-body">
+                  <strong>App Instalado (Modo Nativo)</strong>
+                  <span>Atualizações automáticas ativas</span>
+                </div>
+              </div>
+            `
+        }
 
         <button class="nav-row-card" id="btn-prof-logout">
           <div class="nav-row-icon icon-danger">🚪</div>
@@ -160,6 +183,55 @@ export function renderProfileTab(container, ctx) {
     profileScreen = 'admin';
     renderProfileTab(container, ctx);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  container.querySelector('#btn-prof-edit')?.addEventListener('click', () => {
+    const bp = data.bodyProfile || {};
+    ctx.openModal(
+      'Editar Meu Perfil',
+      `
+        <form id="form-edit-profile" class="modal-form">
+          <div class="form-field">
+            <label>Nome</label>
+            <input type="text" name="name" required value="${escapeHtml(user.name)}" />
+          </div>
+          <div class="form-grid-3">
+            <div class="form-field">
+              <label>Peso (kg)</label>
+              <input type="number" step="0.1" name="weightKg" required value="${bp.weightKg || user.weightKg || 75}" />
+            </div>
+            <div class="form-field">
+              <label>Altura (cm)</label>
+              <input type="number" name="heightCm" required value="${bp.heightCm || user.heightCm || 175}" />
+            </div>
+            <div class="form-field">
+              <label>Meta (kg)</label>
+              <input type="number" step="0.1" name="goalWeightKg" required value="${bp.goalWeightKg || user.goalWeightKg || 75}" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-emerald btn-full">Salvar Alterações</button>
+        </form>
+      `,
+      (modalBody) => {
+        modalBody.querySelector('#form-edit-profile').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const name = String(fd.get('name')).trim();
+          const w = Number(fd.get('weightKg'));
+          const h = Number(fd.get('heightCm'));
+          const gw = Number(fd.get('goalWeightKg'));
+          if (!name) return;
+          ctx.data.bodyProfile.weightKg = w;
+          ctx.data.bodyProfile.heightCm = h;
+          ctx.data.bodyProfile.goalWeightKg = gw;
+          ctx.updateUserProfile({ name, weightKg: w, heightCm: h, goalWeightKg: gw });
+          ctx.saveData();
+          ctx.closeModal();
+          ctx.toast('Perfil atualizado!', 'success');
+          renderProfileTab(container, ctx);
+        });
+      }
+    );
   });
 
   container.querySelector('#btn-prof-install-pwa')?.addEventListener('click', () => {
