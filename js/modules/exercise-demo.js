@@ -12,41 +12,98 @@ export function stopAllDemoVideos() {
   activeCleanupFns.clear();
 }
 
+function normalizeText(value = '') {
+  return String(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 export function detectExerciseMotion(name = '', muscle = '') {
-  const n = String(name).toLowerCase();
-  const m = String(muscle).toLowerCase();
+  const n = normalizeText(name);
+  const m = normalizeText(muscle);
 
-  // Casos específicos que contêm palavras de outros grupos (checar primeiro)
+  // 1. Regras prioritárias (exercícios compostos ou nomes que citam palavras de outros grupos)
   if (n.includes('panturrilha')) return 'calf_raise';
-  if (n.includes('elevação de pernas') || n.includes('elevacao de pernas')) return 'abs_core';
-  if (n.includes('flexão pike') || n.includes('flexao pike')) return 'lateral_raise';
-  if (n.includes('flexão diamante') || n.includes('mergulho') || n.includes('paralelas')) return 'triceps_ext';
-  if (n.includes('crucifixo inverso') || n.includes('face pull')) return 'lateral_raise';
-  if (n.includes('slider') || n.includes('hamstring') || n.includes('nórdica') || n.includes('flexora')) return 'rdl_hinge';
+  if (n.includes('elevacao de pernas')) return 'abs_core';
+  if (n.includes('crucifixo inverso') || n.includes('face pull') || n.includes('y-t-w')) return 'lateral_raise';
+  if (n.includes('supino')) return 'bench_press';
+  if (n.includes('crossover') || n.includes('crucifixo') || n.includes('voador') || n.includes('peck deck') || n.includes('fly')) return 'chest_fly';
+  if (n.includes('desenvolvimento') || n.includes('arnold') || n.includes('flexao pike') || n.includes('militar')) return 'shoulder_press';
+  if (n.includes('flexao diamante') || n.includes('mergulho') || (n.includes('paralelas') && !m.includes('peito'))) return 'triceps_ext';
+  if (n.includes('slider') || n.includes('hamstring') || n.includes('nordica') || n.includes('flexora')) return 'rdl_hinge';
 
-  // Mapeamento direto para os 12 vídeos reais de estúdio
-  if (n.includes('flexão') || n.includes('flexao')) return 'pushup';
-  if (n.includes('supino') || n.includes('crossover') || n.includes('crucifixo')) return 'bench_press';
-  if (n.includes('puxada') || n.includes('barra fixa') || n.includes('pulldown') || n.includes('dead hang')) return 'pulldown';
+  // 2. Cardio / Finishers metabólicos (nunca cair em supino)
+  if (n.includes('burpee') || n.includes('mountain climber')) return 'pushup';
+  if (n.includes('pular corda') || n.includes('corda') && m.includes('cardio') || n.includes('corrida')) return 'calf_raise';
+  if (n.includes('bike') || n.includes('esteira') || n.includes('hiit') || n.includes('eliptico')) return 'squat';
+
+  // 3. Mapeamento direto para os 14 vídeos reais de estúdio
+  if (n.includes('flexao')) return 'pushup';
+  if (n.includes('puxada') || n.includes('barra fixa') || n.includes('pulldown') || n.includes('pullover') || n.includes('dead hang')) return 'pulldown';
   if (n.includes('remada') || n.includes('serrote') || n.includes('cavalinho') || n.includes('encolhimento')) return 'row';
-  if (n.includes('elevação lateral') || n.includes('elevacao lateral') || n.includes('desenvolvimento') || n.includes('arnold') || n.includes('y-t-w')) return 'lateral_raise';
+  if (n.includes('elevacao lateral') || n.includes('elevacao frontal')) return 'lateral_raise';
   if (n.includes('rosca') || n.includes('curl')) return 'biceps_curl';
-  if (n.includes('tríceps') || n.includes('triceps')) return 'triceps_ext';
-  if (n.includes('hip thrust') || n.includes('pélvica') || n.includes('pelvica') || n.includes('ponte') || n.includes('abdutora') || n.includes('abdução') || n.includes('coice') || n.includes('frog')) return 'hip_thrust';
-  if (n.includes('stiff') || n.includes('rdl') || n.includes('terra') || n.includes('lombar') || n.includes('superman') || n.includes('rack pull')) return 'rdl_hinge';
-  if (n.includes('agachamento') || n.includes('leg press') || n.includes('extensora') || n.includes('passada') || n.includes('afundo') || n.includes('step-up')) return 'squat';
-  if (n.includes('abdominal') || n.includes('crunch') || n.includes('vacuum') || n.includes('prancha') || n.includes('canivete')) return 'abs_core';
+  if (n.includes('triceps')) return 'triceps_ext';
+  if (
+    n.includes('hip thrust') ||
+    n.includes('pelvica') ||
+    n.includes('ponte') ||
+    n.includes('abdutora') ||
+    n.includes('abducao') ||
+    n.includes('coice') ||
+    n.includes('frog') ||
+    n.includes('clamshell') ||
+    n.includes('monster walk')
+  ) return 'hip_thrust';
+  if (
+    n.includes('stiff') ||
+    n.includes('rdl') ||
+    n.includes('terra') ||
+    n.includes('lombar') ||
+    n.includes('superman') ||
+    n.includes('bird-dog') ||
+    n.includes('rack pull') ||
+    n.includes('good morning') ||
+    n.includes('hiperextensao')
+  ) return 'rdl_hinge';
+  if (
+    n.includes('agachamento') ||
+    n.includes('leg press') ||
+    n.includes('extensora') ||
+    n.includes('extensao de joelho') ||
+    n.includes('wall sit') ||
+    n.includes('passada') ||
+    n.includes('afundo') ||
+    n.includes('avanco') ||
+    n.includes('lunge') ||
+    n.includes('step-up') ||
+    n.includes('subida no caixote') ||
+    n.includes('sissy') ||
+    n.includes('hack') ||
+    n.includes('pistol')
+  ) return 'squat';
+  if (
+    n.includes('abdominal') ||
+    n.includes('crunch') ||
+    n.includes('vacuum') ||
+    n.includes('prancha') ||
+    n.includes('canivete') ||
+    n.includes('dead bug') ||
+    n.includes('twist')
+  ) return 'abs_core';
 
-  // Fallback por músculo alvo
+  // 4. Fallback por grupo muscular alvo
   if (m.includes('peito')) return 'bench_press';
-  if (m.includes('costas') || m.includes('trapézio')) return 'pulldown';
+  if (m.includes('costas')) return 'pulldown';
+  if (m.includes('trapezio')) return 'row';
   if (m.includes('ombro')) return 'lateral_raise';
-  if (m.includes('bíceps') || m.includes('antebraço')) return 'biceps_curl';
-  if (m.includes('tríceps')) return 'triceps_ext';
-  if (m.includes('glúteo')) return 'hip_thrust';
+  if (m.includes('biceps') || m.includes('antebraco') || m.includes('braco')) return 'biceps_curl';
+  if (m.includes('triceps')) return 'triceps_ext';
+  if (m.includes('gluteo')) return 'hip_thrust';
   if (m.includes('posterior') || m.includes('lombar')) return 'rdl_hinge';
   if (m.includes('panturrilha')) return 'calf_raise';
-  if (m.includes('perna') || m.includes('quadríceps')) return 'squat';
+  if (m.includes('perna') || m.includes('quadriceps') || m.includes('cardio')) return 'squat';
   if (m.includes('abd') || m.includes('core')) return 'abs_core';
   return 'bench_press';
 }
@@ -61,7 +118,7 @@ export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = fal
   const motion = detectExerciseMotion(exerciseName, muscleName);
   const ytUrl = buildYoutubeSearchUrl(exerciseName);
   const safeName = String(exerciseName).replace(/"/g, '&quot;');
-  const videoSrc = `./assets/videos/${motion}.mp4?v=2`;
+  const videoSrc = `./assets/videos/${motion}.mp4?v=3`;
 
   return `
     <div class="demo-video-stage ${compact ? 'demo-video-compact' : ''}">

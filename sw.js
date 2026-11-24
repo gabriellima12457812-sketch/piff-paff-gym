@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.12.0';
+const CACHE_NAME = 'piff-paff-gym-v2.13.0';
 
 const PRECACHE_ASSETS = [
   './',
