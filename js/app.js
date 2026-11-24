@@ -81,23 +81,28 @@ function triggerPwaInstall() {
   }
 
   openModal(
-    'Instalar Piff Paff Gym',
+    'Instalar via Perfil (iPhone / iPad)',
     `
       <div class="pwa-guide-modal">
         <div class="pwa-guide-block">
-          <strong>📱 iPhone / iPad (Safari)</strong>
+          <strong>🍎 Instalação Direta por Perfil iOS (.mobileconfig)</strong>
           <ol>
-            <li>Toque em <strong>Compartilhar</strong> na barra inferior.</li>
-            <li>Toque em <strong>Adicionar à Tela de Início</strong>.</li>
-            <li>Toque em <strong>Adicionar</strong>.</li>
+            <li>Toque no botão verde abaixo e selecione <strong>Permitir</strong> para baixar o perfil do Piff Paff Gym.</li>
+            <li>Abra <strong>Ajustes</strong> no iPhone → toque em <strong>Perfil Baixado</strong> (no topo).</li>
+            <li>Toque em <strong>Instalar</strong> → digite seu código → pronto! O app aparece em tela cheia na tela inicial.</li>
           </ol>
         </div>
+        <a
+          href="./assets/piff-paff-gym.mobileconfig"
+          download="Piff-Paff-Gym.mobileconfig"
+          class="btn btn-emerald btn-full btn-lg"
+          id="btn-download-ios-profile"
+        >
+          🍎 Baixar Perfil de Instalação (iOS)
+        </a>
         <div class="pwa-guide-block">
           <strong>🤖 Android (Chrome)</strong>
-          <ol>
-            <li>Toque no menu <strong>⋮</strong> no topo direito.</li>
-            <li>Selecione <strong>Instalar aplicativo</strong>.</li>
-          </ol>
+          <p class="hint-line">No Chrome do Android, toque em <strong>⋮ → Instalar aplicativo</strong>.</p>
         </div>
       </div>
     `

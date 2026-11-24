@@ -136,10 +136,10 @@ export function renderProfileTab(container, ctx) {
           !(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
             ? `
               <button class="nav-row-card" id="btn-prof-install-pwa">
-                <div class="nav-row-icon icon-emerald">📲</div>
+                <div class="nav-row-icon icon-emerald">🍎</div>
                 <div class="nav-row-body">
-                  <strong>Instalar App no Celular</strong>
-                  <span>Usar como aplicativo nativo (iOS & Android)</span>
+                  <strong>Instalar via Perfil (iOS / App)</strong>
+                  <span>Baixa o perfil .mobileconfig oficial (Ajustes → Instalar)</span>
                 </div>
                 <span class="nav-row-chevron">›</span>
               </button>
