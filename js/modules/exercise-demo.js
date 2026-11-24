@@ -1,6 +1,7 @@
 /**
- * Piff Paff Gym — Vídeos Reais de Execução (100% Pessoa Real em Estúdio Escuro + Músculo Marcado em Esmeralda)
- * Todos os exercícios reproduzem micro-vídeos reais MP4 (30fps fluxo óptico) na mesma temática do Atlas Real.
+ * Piff Paff Gym — Execução Real de Estúdio (100% Atleta Real em Estúdio Escuro + Músculo Esmeralda)
+ * Renderização nítida em 60fps via GPU (dupla foto de estúdio Start -> Pico de Contração),
+ * eliminando 100% as distorções de morphing/minterpolate e falhas de <video> no iOS Safari/PWA.
  */
 
 let activeCleanupFns = new Set();
@@ -19,6 +20,23 @@ function normalizeText(value = '') {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+const MOTION_VECTORS = {
+  bench_press: { dy: '-5px', dx: '0px' },
+  chest_fly: { dy: '0px', dx: '0px' },
+  pushup: { dy: '-6px', dx: '0px' },
+  pulldown: { dy: '6px', dx: '0px' },
+  row: { dy: '-4px', dx: '-3px' },
+  lateral_raise: { dy: '-4px', dx: '0px' },
+  shoulder_press: { dy: '-6px', dx: '0px' },
+  biceps_curl: { dy: '-4px', dx: '0px' },
+  triceps_ext: { dy: '5px', dx: '0px' },
+  squat: { dy: '6px', dx: '0px' },
+  hip_thrust: { dy: '-6px', dx: '0px' },
+  rdl_hinge: { dy: '5px', dx: '0px' },
+  abs_core: { dy: '5px', dx: '0px' },
+  calf_raise: { dy: '-7px', dx: '0px' },
+};
+
 export function detectExerciseMotion(name = '', muscle = '') {
   const n = normalizeText(name);
   const m = normalizeText(muscle);
@@ -35,10 +53,10 @@ export function detectExerciseMotion(name = '', muscle = '') {
 
   // 2. Cardio / Finishers metabólicos (nunca cair em supino)
   if (n.includes('burpee') || n.includes('mountain climber')) return 'pushup';
-  if (n.includes('pular corda') || n.includes('corda') && m.includes('cardio') || n.includes('corrida')) return 'calf_raise';
+  if (n.includes('pular corda') || (n.includes('corda') && m.includes('cardio')) || n.includes('corrida')) return 'calf_raise';
   if (n.includes('bike') || n.includes('esteira') || n.includes('hiit') || n.includes('eliptico')) return 'squat';
 
-  // 3. Mapeamento direto para os 14 vídeos reais de estúdio
+  // 3. Mapeamento direto para os 14 pares reais de estúdio
   if (n.includes('flexao')) return 'pushup';
   if (n.includes('puxada') || n.includes('barra fixa') || n.includes('pulldown') || n.includes('pullover') || n.includes('dead hang')) return 'pulldown';
   if (n.includes('remada') || n.includes('serrote') || n.includes('cavalinho') || n.includes('encolhimento')) return 'row';
@@ -116,26 +134,43 @@ export function buildYoutubeSearchUrl(exerciseName) {
 
 export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = false) {
   const motion = detectExerciseMotion(exerciseName, muscleName);
+  const vec = MOTION_VECTORS[motion] || { dy: '-4px', dx: '0px' };
   const ytUrl = buildYoutubeSearchUrl(exerciseName);
   const safeName = String(exerciseName).replace(/"/g, '&quot;');
-  const videoSrc = `./assets/videos/${motion}.mp4?v=3`;
+  const srcA = `./assets/demos/${motion}_a.jpg?v=4`;
+  const srcB = `./assets/demos/${motion}_b.jpg?v=4`;
 
   return `
-    <div class="demo-video-stage ${compact ? 'demo-video-compact' : ''}">
-      <video
-        class="demo-real-video"
-        src="${videoSrc}"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="auto"
-        aria-label="Vídeo real de execução de ${safeName}"
-      ></video>
+    <div
+      class="demo-video-stage demo-studio-player ${compact ? 'demo-video-compact' : ''}"
+      data-demo-stage
+      data-motion="${motion}"
+      style="--demo-dx:${vec.dx};--demo-dy:${vec.dy};"
+      role="region"
+      aria-label="Demonstração real de execução de ${safeName}"
+    >
+      <div class="demo-frames-wrap">
+        <img
+          class="demo-frame-img demo-frame-a"
+          src="${srcA}"
+          alt="Posição inicial — ${safeName}"
+          loading="eager"
+          decoding="async"
+        />
+        <img
+          class="demo-frame-img demo-frame-b"
+          src="${srcB}"
+          alt="Pico de contração — ${safeName}"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+
       <div class="demo-video-hud-top">
         <span class="demo-live-pill"><span class="demo-rec-dot"></span> EXECUÇÃO REAL</span>
-        <span class="demo-phase-badge" data-phase-label>CONTROLADO</span>
+        <span class="demo-phase-badge" data-phase-label>POSIÇÃO INICIAL</span>
       </div>
+
       <a
         href="${ytUrl}"
         target="_blank"
@@ -143,6 +178,10 @@ export function renderExerciseDemoMarkup(exerciseName, muscleName, compact = fal
         class="demo-yt-link"
         title="Ver vídeo completo no YouTube"
       >▶ YouTube ↗</a>
+
+      <div class="demo-cadence-bar" aria-hidden="true">
+        <div class="demo-cadence-fill" data-cadence-fill></div>
+      </div>
     </div>
   `;
 }
@@ -151,25 +190,60 @@ export function mountDemoVideos(container) {
   stopAllDemoVideos();
   if (!container) return;
 
-  const videos = container.querySelectorAll('video.demo-real-video');
-  videos.forEach((video) => {
-    video.muted = true;
-    video.playsInline = true;
-    video.play().catch(() => {});
+  const stages = Array.from(container.querySelectorAll('[data-demo-stage]'));
+  if (!stages.length) return;
 
-    const phaseEl = video.closest('.demo-video-stage')?.querySelector('[data-phase-label]');
-    const onTimeUpdate = () => {
-      if (!phaseEl || !video.duration) return;
-      const p = video.currentTime / video.duration;
-      if (p < 0.36) phaseEl.textContent = 'CONCÊNTRICA ↑';
-      else if (p < 0.62) phaseEl.textContent = 'PICO · CONTRAÇÃO';
-      else phaseEl.textContent = 'EXCÊNTRICA ↓';
+  // Ciclo rítmico limpo (2.4s): Início nítido -> Contratação Máxima esmeralda nítida
+  const CYCLE_MS = 2400;
+  let rafId = null;
+  const startTime = performance.now();
+
+  // Permite tocar na imagem para alternar manualmente (pausar/retomar) sem interferir no link YouTube
+  stages.forEach((stage) => {
+    const onTap = (e) => {
+      if (e.target.closest('a')) return;
+      const isManual = stage.classList.toggle('is-peak-locked');
+      const badge = stage.querySelector('[data-phase-label]');
+      if (badge) {
+        badge.textContent = isManual ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
+        badge.classList.toggle('is-peak', isManual);
+      }
     };
+    stage.addEventListener('click', onTap);
+    activeCleanupFns.add(() => stage.removeEventListener('click', onTap));
+  });
 
-    video.addEventListener('timeupdate', onTimeUpdate);
-    activeCleanupFns.add(() => {
-      video.removeEventListener('timeupdate', onTimeUpdate);
-      video.pause();
-    });
+  const tick = (now) => {
+    const elapsed = (now - startTime) % CYCLE_MS;
+    const p = elapsed / CYCLE_MS;
+    const inPeak = p >= 0.42 && p < 0.90;
+
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i];
+      if (stage.classList.contains('is-peak-locked')) continue;
+
+      const phaseEl = stage.querySelector('[data-phase-label]');
+      const fillEl = stage.querySelector('[data-cadence-fill]');
+
+      stage.classList.toggle('is-peak', inPeak);
+
+      if (phaseEl) {
+        const nextText = inPeak ? 'PICO · CONTRAÇÃO' : 'POSIÇÃO INICIAL';
+        if (phaseEl.textContent !== nextText) {
+          phaseEl.textContent = nextText;
+          phaseEl.classList.toggle('is-peak', inPeak);
+        }
+      }
+      if (fillEl) {
+        fillEl.style.width = `${(p * 100).toFixed(1)}%`;
+      }
+    }
+
+    rafId = requestAnimationFrame(tick);
+  };
+
+  rafId = requestAnimationFrame(tick);
+  activeCleanupFns.add(() => {
+    if (rafId !== null) cancelAnimationFrame(rafId);
   });
 }

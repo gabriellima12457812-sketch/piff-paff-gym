@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.13.0';
+const CACHE_NAME = 'piff-paff-gym-v2.14.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -8,6 +8,34 @@ const PRECACHE_ASSETS = [
   './vendor/chart.umd.min.js',
   './assets/atlas-front.jpg',
   './assets/atlas-back.jpg',
+  './assets/demos/abs_core_a.jpg?v=4',
+  './assets/demos/abs_core_b.jpg?v=4',
+  './assets/demos/bench_press_a.jpg?v=4',
+  './assets/demos/bench_press_b.jpg?v=4',
+  './assets/demos/biceps_curl_a.jpg?v=4',
+  './assets/demos/biceps_curl_b.jpg?v=4',
+  './assets/demos/calf_raise_a.jpg?v=4',
+  './assets/demos/calf_raise_b.jpg?v=4',
+  './assets/demos/chest_fly_a.jpg?v=4',
+  './assets/demos/chest_fly_b.jpg?v=4',
+  './assets/demos/hip_thrust_a.jpg?v=4',
+  './assets/demos/hip_thrust_b.jpg?v=4',
+  './assets/demos/lateral_raise_a.jpg?v=4',
+  './assets/demos/lateral_raise_b.jpg?v=4',
+  './assets/demos/pulldown_a.jpg?v=4',
+  './assets/demos/pulldown_b.jpg?v=4',
+  './assets/demos/pushup_a.jpg?v=4',
+  './assets/demos/pushup_b.jpg?v=4',
+  './assets/demos/rdl_hinge_a.jpg?v=4',
+  './assets/demos/rdl_hinge_b.jpg?v=4',
+  './assets/demos/row_a.jpg?v=4',
+  './assets/demos/row_b.jpg?v=4',
+  './assets/demos/shoulder_press_a.jpg?v=4',
+  './assets/demos/shoulder_press_b.jpg?v=4',
+  './assets/demos/squat_a.jpg?v=4',
+  './assets/demos/squat_b.jpg?v=4',
+  './assets/demos/triceps_ext_a.jpg?v=4',
+  './assets/demos/triceps_ext_b.jpg?v=4',
   './icons/favicon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -59,8 +87,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
+  // Nunca interceptar Range requests ou arquivos MP4 (evita tela preta em vídeo no iOS Safari)
   const url = new URL(request.url);
   if (
+    request.headers.get('range') ||
+    url.pathname.endsWith('.mp4') ||
     url.hostname.includes('spotify.com') ||
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('firestore.googleapis.com')

@@ -22,6 +22,7 @@ let sessionKey = '';
 let workoutScreen = 'home'; // 'home' | 'active' | 'matrices' | 'custom' | 'builder'
 let executionLayout = 'focus'; // 'focus' (1 por vez didático) | 'list'
 let showFocusDemo = true;
+let expandedListDemoIdx = null;
 let currentExIndex = 0;
 let selectedCustomId = null;
 
@@ -685,6 +686,7 @@ function renderListExercisesView(session, metrics, isPro) {
         .map((ex, idx) => {
           const doneCnt = ex.sets.filter((s) => s.done).length;
           const allDone = doneCnt === ex.sets.length;
+          const isDemoOpen = expandedListDemoIdx === idx;
           return `
             <div class="compact-ex-card ${allDone ? 'done' : ''}">
               <div class="compact-ex-top" data-open-focus-ex="${idx}">
@@ -705,6 +707,10 @@ function renderListExercisesView(session, metrics, isPro) {
                   )
                   .join('')}
               </div>
+              <button class="list-demo-toggle-btn" data-toggle-list-demo="${idx}">
+                ${isDemoOpen ? 'Ocultar Execução ▲' : '▶ Ver Execução Real'}
+              </button>
+              ${isDemoOpen ? `<div class="mt-10">${renderExerciseDemoMarkup(ex.name, ex.muscle, true)}</div>` : ''}
             </div>
           `;
         })
@@ -1022,6 +1028,14 @@ function bindActiveExecutionEvents(container, ctx, session) {
   container.querySelector('#btn-toggle-focus-demo')?.addEventListener('click', () => {
     showFocusDemo = !showFocusDemo;
     renderWorkoutsTab(container, ctx);
+  });
+
+  container.querySelectorAll('[data-toggle-list-demo]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.toggleListDemo);
+      expandedListDemoIdx = expandedListDemoIdx === idx ? null : idx;
+      renderWorkoutsTab(container, ctx);
+    });
   });
 
   container.querySelector('#btn-open-spotify-mini')?.addEventListener('click', () => {
