@@ -134,7 +134,6 @@ function buildContext() {
       invalidateActiveSession();
       renderTopBar();
       renderActiveTab();
-      showToast(`Local: ${APP_CONFIG.LOCATIONS[loc].label}`, 'success');
     },
     setQuickLevel(lvl) {
       if (!activeUser) return;
@@ -145,12 +144,6 @@ function buildContext() {
       renderTopBar();
       renderBottomNav();
       renderActiveTab();
-      showToast(
-        lvl === 'pro'
-          ? 'Atleta Pro ativo! FST-7, Rest-Pause e Drop-Set liberados.'
-          : `Nível: ${APP_CONFIG.LEVELS[lvl].label}`,
-        'success'
-      );
     },
     refreshHeader() {
       renderTopBar();

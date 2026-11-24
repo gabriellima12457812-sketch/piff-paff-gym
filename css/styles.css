@@ -107,7 +107,7 @@ button {
 }
 
 .screen-enter {
-  animation: screenEnter 200ms ease-out;
+  animation: none;
 }
 
 /* ============================================================================
