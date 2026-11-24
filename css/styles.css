@@ -2035,3 +2035,236 @@ body.theme-pro .back-btn {
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast-success { border-color: var(--emerald); }
 .toast-error { border-color: var(--danger); color: #fca5a5; }
+
+/* ============================================================================
+   TOPBAR SPOTIFY ICON & INTERACTIVE REAL-HUMAN MUSCLE ATLAS
+   ============================================================================ */
+.topbar-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: all var(--transition);
+}
+
+.topbar-icon-btn.active {
+  background: var(--emerald-soft);
+  border-color: var(--emerald);
+}
+
+.mb-14 { margin-bottom: 14px; }
+
+.atlas-stage-card {
+  background: #0d0d10;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.atlas-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.atlas-side-toggle {
+  display: inline-flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.atlas-side-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all var(--transition);
+}
+
+.atlas-side-btn.active {
+  background: var(--emerald-soft);
+  color: #34d399;
+  box-shadow: inset 0 0 0 1px var(--emerald-border);
+}
+
+.atlas-photo-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 3 / 4;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #0d0d10;
+  user-select: none;
+}
+
+.atlas-real-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.atlas-svg-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.atlas-muscle-group {
+  cursor: pointer;
+  outline: none;
+}
+
+.atlas-muscle-path {
+  fill: rgba(16, 185, 129, 0.01);
+  stroke: transparent;
+  stroke-width: 1.4;
+  transition: fill 200ms ease, stroke 200ms ease;
+}
+
+.atlas-muscle-group:hover .atlas-muscle-path {
+  fill: rgba(16, 185, 129, 0.22);
+  stroke: rgba(52, 211, 153, 0.55);
+}
+
+.atlas-muscle-group.selected .atlas-muscle-path {
+  fill: rgba(16, 185, 129, 0.46);
+  stroke: #34d399;
+  stroke-width: 2;
+  filter: url(#atlasGlow);
+}
+
+.atlas-pin-dot {
+  fill: rgba(255, 255, 255, 0.72);
+  stroke: rgba(9, 9, 11, 0.9);
+  stroke-width: 1.5;
+  transition: all 180ms ease;
+}
+
+.atlas-muscle-group:hover .atlas-pin-dot {
+  fill: #34d399;
+}
+
+.atlas-muscle-group.selected .atlas-pin-dot {
+  fill: #34d399;
+  stroke: #ffffff;
+  stroke-width: 1.6;
+}
+
+@keyframes atlasPulse {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+.atlas-pulse-ring {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 1.8;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlasPulse 1.5s ease-out infinite;
+}
+
+.atlas-selected-callout {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.atlas-callout-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--emerald);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+  flex-shrink: 0;
+}
+
+.atlas-selected-callout strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.atlas-selected-callout span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.atlas-muscle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+
+.atlas-muscle-pill.active {
+  background: var(--emerald-soft);
+  border-color: var(--emerald);
+  color: #34d399;
+}
+
+.atlas-filters-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px;
+}
+
+.atlas-ex-name {
+  margin: 7px 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.atlas-ex-cue {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}

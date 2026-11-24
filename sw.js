@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.0.0';
+const CACHE_NAME = 'piff-paff-gym-v2.1.0';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -6,6 +6,8 @@ const PRECACHE_ASSETS = [
   '/manifest.json',
   '/css/styles.css',
   '/vendor/chart.umd.min.js',
+  '/assets/atlas-front.jpg',
+  '/assets/atlas-back.jpg',
   '/icons/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -20,6 +22,7 @@ const PRECACHE_ASSETS = [
   '/js/data/demo-users.js',
   '/js/modules/entitlements.js',
   '/js/modules/workout-engine.js',
+  '/js/modules/atlas.js',
   '/js/modules/progress-hub.js',
   '/js/modules/profile.js',
   '/js/modules/goals.js',

@@ -8,6 +8,7 @@ import { APP_CONFIG, getRankForScore } from './config.js';
 import { storage } from './storage.js';
 import { auth } from './auth.js';
 import { renderWorkoutsTab, resetWorkoutRuntime } from './modules/workout-engine.js';
+import { renderAtlasTab } from './modules/atlas.js';
 import {
   renderProgressTab,
   resetProgressScreen,
@@ -232,9 +233,9 @@ function renderBottomNav() {
   const isAdmin = activeUser?.role === 'admin';
   const items = [
     { id: 'workouts', label: 'Treino', icon: '⚡' },
+    { id: 'atlas', label: 'Atlas', icon: '🧍' },
     { id: 'progress', label: 'Progresso', icon: '📈' },
     { id: 'nutrition', label: 'Nutrição', icon: '💧' },
-    { id: 'spotify', label: 'Música', icon: '🎵' },
     { id: 'profile', label: isAdmin ? 'Admin' : 'Perfil', icon: isAdmin ? '👑' : '👤', isAdmin },
   ];
 
@@ -274,9 +275,15 @@ function renderActiveTab() {
   if (!container || !activeUser || !activeData) return;
 
   const ctx = buildContext();
+  const topSpBtn = document.getElementById('topbar-spotify-btn');
+  if (topSpBtn) topSpBtn.classList.toggle('active', activeTab === 'spotify');
+
   switch (activeTab) {
     case 'workouts':
       renderWorkoutsTab(container, ctx);
+      break;
+    case 'atlas':
+      renderAtlasTab(container, ctx);
       break;
     case 'progress':
       renderProgressTab(container, ctx);
@@ -380,6 +387,14 @@ function bindGlobalEvents() {
       showToast('Voltou para Admin Master.', 'success');
       loadActiveSession('profile', 'admin');
     }
+  });
+
+  document.getElementById('topbar-spotify-btn')?.addEventListener('click', () => {
+    if (!activeUser) return;
+    activeTab = activeTab === 'spotify' ? 'workouts' : 'spotify';
+    renderBottomNav();
+    renderActiveTab();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
   document.getElementById('header-score-chip')?.addEventListener('click', () => {
