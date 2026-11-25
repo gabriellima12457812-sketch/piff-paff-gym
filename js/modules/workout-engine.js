@@ -56,65 +56,13 @@ let builderDraft = {
 };
 
 let sharedAudioCtx = null;
-let fallbackAudioEl = null;
-
-function createChimeWavDataUri() {
-  // Gera WAV PCM 8kHz (~0.55s) com triplo bip limpo em memória (100% offline, funciona no iOS)
-  const sampleRate = 8000;
-  const durationSec = 0.55;
-  const numSamples = Math.floor(sampleRate * durationSec);
-  const buffer = new ArrayBuffer(44 + numSamples * 2);
-  const view = new DataView(buffer);
-  const writeStr = (off, str) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + numSamples * 2, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, 'data');
-  view.setUint32(40, numSamples * 2, true);
-
-  const freqs = [880, 1108.73, 1318.51];
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const noteIdx = t < 0.16 ? 0 : t < 0.32 ? 1 : 2;
-    const localT = t - noteIdx * 0.16;
-    const env = Math.max(0, 1 - localT / 0.22) * Math.min(1, localT / 0.012);
-    const val = Math.sin(2 * Math.PI * freqs[noteIdx] * t) * env * 0.55;
-    view.setInt16(44 + i * 2, Math.max(-32767, Math.min(32767, Math.round(val * 32767))), true);
-  }
-
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return `data:audio/wav;base64,${btoa(binary)}`;
-}
 
 function unlockAudioContext() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (AudioCtx) {
-      if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
-      if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
-    }
-    if (!fallbackAudioEl && typeof Audio !== 'undefined') {
-      fallbackAudioEl = new Audio(createChimeWavDataUri());
-      fallbackAudioEl.preload = 'auto';
-      fallbackAudioEl.volume = 0.01;
-      fallbackAudioEl.play().then(() => {
-        fallbackAudioEl.pause();
-        fallbackAudioEl.currentTime = 0;
-        fallbackAudioEl.volume = 0.9;
-      }).catch(() => {});
-    }
+    if (!AudioCtx) return null;
+    if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
     return sharedAudioCtx;
   } catch {
     return null;
@@ -123,10 +71,10 @@ function unlockAudioContext() {
 
 function playTimerChime() {
   if (!timerState.soundEnabled) return;
-  let played = false;
   try {
     const ctx = unlockAudioContext();
-    if (ctx && ctx.state === 'running') {
+    if (!ctx) return;
+    const triggerNotes = () => {
       const now = ctx.currentTime;
       const notes = [880, 1108.73, 1318.51];
       notes.forEach((freq, i) => {
@@ -135,26 +83,21 @@ function playTimerChime() {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now + i * 0.14);
         gain.gain.setValueAtTime(0.001, now + i * 0.14);
-        gain.gain.linearRampToValueAtTime(0.26, now + i * 0.14 + 0.02);
+        gain.gain.linearRampToValueAtTime(0.22, now + i * 0.14 + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.34);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(now + i * 0.14);
         osc.stop(now + i * 0.14 + 0.36);
       });
-      played = true;
+    };
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(triggerNotes).catch(() => {});
+    } else {
+      triggerNotes();
     }
   } catch {
-    // Fallback HTML5 Audio abaixo
-  }
-  if (!played && fallbackAudioEl) {
-    try {
-      fallbackAudioEl.volume = 0.9;
-      fallbackAudioEl.currentTime = 0;
-      fallbackAudioEl.play().catch(() => {});
-    } catch {
-      // Silencioso se bloqueado
-    }
+    // Silencioso se bloqueado — nunca interrompe música em segundo plano
   }
 }
 
