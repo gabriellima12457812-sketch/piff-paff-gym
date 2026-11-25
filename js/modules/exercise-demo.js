@@ -22,6 +22,7 @@ function normalizeText(value = '') {
 
 const MOTION_VECTORS = {
   bench_press: { dy: '-3px', dx: '0px' },
+  db_bench_press: { dy: '-3px', dx: '0px' },
   chest_fly: { dy: '0px', dx: '0px' },
   pushup: { dy: '-3px', dx: '0px' },
   pulldown: { dy: '3px', dx: '0px' },
@@ -45,6 +46,7 @@ export function detectExerciseMotion(name = '', muscle = '') {
   if (n.includes('panturrilha')) return 'calf_raise';
   if (n.includes('elevacao de pernas')) return 'abs_core';
   if (n.includes('crucifixo inverso') || n.includes('face pull') || n.includes('y-t-w')) return 'lateral_raise';
+  if (n.includes('supino') && n.includes('halter')) return 'db_bench_press';
   if (n.includes('supino')) return 'bench_press';
   if (n.includes('crossover') || n.includes('crucifixo') || n.includes('voador') || n.includes('peck deck') || n.includes('fly')) return 'chest_fly';
   if (n.includes('desenvolvimento') || n.includes('arnold') || n.includes('flexao pike') || n.includes('militar')) return 'shoulder_press';

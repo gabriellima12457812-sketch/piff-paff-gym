@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.15.0';
+const CACHE_NAME = 'piff-paff-gym-v2.16.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -12,6 +12,8 @@ const PRECACHE_ASSETS = [
   './assets/demos/abs_core_b.jpg?v=4',
   './assets/demos/bench_press_a.jpg?v=4',
   './assets/demos/bench_press_b.jpg?v=4',
+  './assets/demos/db_bench_press_a.jpg?v=4',
+  './assets/demos/db_bench_press_b.jpg?v=4',
   './assets/demos/biceps_curl_a.jpg?v=4',
   './assets/demos/biceps_curl_b.jpg?v=4',
   './assets/demos/calf_raise_a.jpg?v=4',
@@ -50,6 +52,7 @@ const PRECACHE_ASSETS = [
   './js/data/demo-users.js',
   './js/modules/entitlements.js',
   './js/modules/workout-engine.js',
+  './js/modules/cardio.js',
   './js/modules/atlas.js',
   './js/modules/exercise-demo.js',
   './js/modules/progress-hub.js',

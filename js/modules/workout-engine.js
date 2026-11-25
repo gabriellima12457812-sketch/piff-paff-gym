@@ -8,7 +8,7 @@
  *  - 'builder'  : Gerador de Treino Personalizado em 2 passos simples
  */
 
-import { APP_CONFIG } from '../config.js';
+import { APP_CONFIG, getRankForScore } from '../config.js';
 import {
   PRO_MATRICES,
   EXERCISE_LIBRARY,
@@ -16,10 +16,16 @@ import {
   buildCustomWorkoutSession,
 } from '../data/workouts.js';
 import { renderExerciseDemoMarkup, mountDemoVideos } from './exercise-demo.js';
+import {
+  renderCardioScreen,
+  resetCardioRuntime,
+  isCardioRunning,
+  getCardioQuickSummary,
+} from './cardio.js';
 
 let activeSession = null;
 let sessionKey = '';
-let workoutScreen = 'home'; // 'home' | 'active' | 'matrices' | 'custom' | 'builder'
+let workoutScreen = 'home'; // 'home' | 'active' | 'matrices' | 'custom' | 'builder' | 'cardio'
 let executionLayout = 'focus'; // 'focus' (1 por vez didático) | 'list'
 let showFocusDemo = true;
 let expandedListDemoIdx = null;
@@ -279,9 +285,11 @@ export function resetWorkoutRuntime() {
   selectedCustomId = null;
   workoutScreen = 'home';
   executionLayout = 'focus';
+  expandedListDemoIdx = null;
   currentExIndex = 0;
   builderStep = 1;
   stopTimerInterval();
+  resetCardioRuntime();
   timerState.totalSec = 60;
   timerState.remainingSec = 60;
 }
@@ -362,12 +370,19 @@ export function renderWorkoutsTab(container, ctx) {
     renderBuilderScreen(container, ctx);
     return;
   }
+  if (workoutScreen === 'cardio') {
+    renderCardioScreen(container, ctx, () => {
+      workoutScreen = 'home';
+      renderWorkoutsTab(container, ctx);
+    });
+    return;
+  }
 
   renderWorkoutHomeScreen(container, ctx, session);
 }
 
 /* ============================================================================
-   TELA 1: HOME DO TREINO (Minimalista & Limpa)
+   TELA 1: HOME DO TREINO (Completa, Clara & Direta)
    ============================================================================ */
 function renderWorkoutHomeScreen(container, ctx, session) {
   const { user, data } = ctx;
@@ -377,17 +392,53 @@ function renderWorkoutHomeScreen(container, ctx, session) {
   const firstName = (user.name || 'Atleta').split(' ')[0];
   const customCount = (data.customWorkouts || []).length;
 
+  const score = Number(data.gamification?.score || 0);
+  const rankInfo = getRankForScore(score);
+  const streak = Number(data.gamification?.streakDays || 0);
+  const completedWorkouts = Number(data.gamification?.workoutsCompleted || 0);
+  const cardioList = Array.isArray(data.cardioSessions) ? data.cardioSessions : [];
+  const totalCardioKm = cardioList.reduce((acc, s) => acc + (Number(s.distanceKm) || 0), 0);
+  const liveCardio = getCardioQuickSummary();
+
   container.innerHTML = `
     <div class="screen-enter">
       <div class="home-greet-row">
         <div>
           <h1 class="screen-title">Olá, ${escapeHtml(firstName)}</h1>
-          <p class="screen-sub">Pronto para evoluir hoje?</p>
+          <p class="screen-sub">${escapeHtml(rankInfo.current.name)} · ${score} pts</p>
         </div>
-        <span class="pill ${isPro ? 'pill-gold' : 'pill-emerald'}">${APP_CONFIG.LEVELS[user.level || 'intermediate'].shortLabel}</span>
+        <div class="home-corner-actions">
+          <button
+            class="corner-cardio-btn ${isCardioRunning() ? 'active-pulse' : ''}"
+            id="btn-corner-cardio"
+            title="Abrir Corrida & Caminhada"
+          >
+            ${liveCardio ? escapeHtml(liveCardio) : '🏃 Corrida'}
+          </button>
+          <span class="pill ${isPro ? 'pill-gold' : 'pill-emerald'}">${APP_CONFIG.LEVELS[user.level || 'intermediate'].shortLabel}</span>
+        </div>
       </div>
 
-      <!-- Seletores 1-Clique Ultra Compactos -->
+      <!-- Painel Rápido do Atleta (Score, Sequência & Cardio) -->
+      <div class="home-stats-strip mb-14">
+        <div class="home-stat-tile">
+          <span class="home-stat-lbl">SCORE</span>
+          <strong class="text-emerald">${score}</strong>
+          <small>${escapeHtml(rankInfo.current.name)}</small>
+        </div>
+        <div class="home-stat-tile">
+          <span class="home-stat-lbl">SEQUÊNCIA</span>
+          <strong>🔥 ${streak}d</strong>
+          <small>${completedWorkouts} treino(s)</small>
+        </div>
+        <button class="home-stat-tile home-stat-btn" id="btn-stat-cardio" type="button">
+          <span class="home-stat-lbl">CORRIDA</span>
+          <strong>🏃 ${totalCardioKm.toFixed(1)} km</strong>
+          <small>${cardioList.length} sessão(ões)</small>
+        </button>
+      </div>
+
+      <!-- Seletores 1-Clique de Local e Nível -->
       <div class="compact-context-stack mb-16">
         <div class="pill-choice-row">
           <button class="choice-chip ${user.location === 'gym' ? 'active' : ''}" data-home-loc="gym">🏋️ Academia</button>
@@ -433,13 +484,37 @@ function renderWorkoutHomeScreen(container, ctx, session) {
             : ''
         }
 
+        <!-- Prévia dos Exercícios do Treino de Hoje -->
+        <div class="today-ex-preview">
+          ${session.exercises
+            .map(
+              (ex, i) => `
+              <div class="today-ex-preview-row">
+                <span class="today-ex-num">${i + 1}</span>
+                <span class="today-ex-name">${escapeHtml(ex.name)}</span>
+                <span class="today-ex-sets">${ex.sets.length}×${escapeHtml(ex.reps)}</span>
+              </div>
+            `
+            )
+            .join('')}
+        </div>
+
         <button class="btn ${isPro ? 'btn-gold' : 'btn-emerald'} btn-full btn-lg mt-12" id="btn-start-workout">
           ${metrics.doneSets > 0 ? `Continuar Treino (${metrics.doneSets}/${metrics.totalSets})` : 'Iniciar Treino →'}
         </button>
       </section>
 
-      <!-- Navegação Minimalista para Outras Telas de Treino -->
+      <!-- Navegação Completa de Recursos do Treino -->
       <div class="nav-list-group">
+        <button class="nav-row-card" id="btn-goto-cardio">
+          <div class="nav-row-icon icon-emerald">🏃</div>
+          <div class="nav-row-body">
+            <strong>Corrida & Caminhada (Andar / Correr)</strong>
+            <span>${liveCardio ? `Em andamento: ${escapeHtml(liveCardio)}` : 'Iniciar, Pausar e Stop com GPS, Pace e Calorias'}</span>
+          </div>
+          <span class="nav-row-chevron">›</span>
+        </button>
+
         <button class="nav-row-card" id="btn-goto-matrices">
           <div class="nav-row-icon icon-emerald">🎯</div>
           <div class="nav-row-body">
@@ -454,6 +529,15 @@ function renderWorkoutHomeScreen(container, ctx, session) {
           <div class="nav-row-body">
             <strong>Treinos Personalizados</strong>
             <span>${customCount ? `${customCount} treino(s) salvo(s)` : 'Monte seu treino sob medida'}</span>
+          </div>
+          <span class="nav-row-chevron">›</span>
+        </button>
+
+        <button class="nav-row-card" id="btn-home-spotify">
+          <div class="nav-row-icon icon-spotify">🎵</div>
+          <div class="nav-row-body">
+            <strong>Spotify Workout</strong>
+            <span>Abrir mini-player com suas playlists de treino</span>
           </div>
           <span class="nav-row-chevron">›</span>
         </button>
@@ -489,6 +573,15 @@ function renderWorkoutHomeScreen(container, ctx, session) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
+  const openCardio = () => {
+    workoutScreen = 'cardio';
+    renderWorkoutsTab(container, ctx);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  container.querySelector('#btn-corner-cardio')?.addEventListener('click', openCardio);
+  container.querySelector('#btn-stat-cardio')?.addEventListener('click', openCardio);
+  container.querySelector('#btn-goto-cardio')?.addEventListener('click', openCardio);
+
   container.querySelector('#btn-goto-matrices')?.addEventListener('click', () => {
     workoutScreen = 'matrices';
     renderWorkoutsTab(container, ctx);
@@ -499,6 +592,10 @@ function renderWorkoutHomeScreen(container, ctx, session) {
     workoutScreen = 'custom';
     renderWorkoutsTab(container, ctx);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  container.querySelector('#btn-home-spotify')?.addEventListener('click', () => {
+    ctx.openSpotifyMiniPlayer();
   });
 }
 

@@ -493,7 +493,43 @@ function registerPwa() {
   }
 }
 
+function runEntrySplash() {
+  const splash = document.getElementById('app-splash');
+  if (!splash) return;
+  const fill = document.getElementById('splash-loader-fill');
+  const txt = document.getElementById('splash-status-text');
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    splash.classList.add('is-leaving');
+    setTimeout(() => splash.remove(), 360);
+  };
+
+  splash.addEventListener('click', dismiss, { once: true });
+
+  requestAnimationFrame(() => {
+    if (fill) fill.style.width = '42%';
+  });
+
+  setTimeout(() => {
+    if (dismissed) return;
+    if (fill) fill.style.width = '78%';
+    if (txt) txt.textContent = 'Sincronizando atlas & perfil...';
+  }, 420);
+
+  setTimeout(() => {
+    if (dismissed) return;
+    if (fill) fill.style.width = '100%';
+    if (txt) txt.textContent = 'Pronto para treinar!';
+  }, 880);
+
+  setTimeout(dismiss, 1280);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  runEntrySplash();
   auth.init();
   bindAuthEvents();
   bindGlobalEvents();
