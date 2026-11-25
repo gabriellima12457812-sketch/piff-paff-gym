@@ -40,6 +40,7 @@ let timerState = {
   running: false,
   autoStart: true,
   soundEnabled: true,
+  inAppAlertArmed: true,
   intervalId: null,
   activeExerciseName: '',
 };
@@ -55,13 +56,65 @@ let builderDraft = {
 };
 
 let sharedAudioCtx = null;
+let fallbackAudioEl = null;
+
+function createChimeWavDataUri() {
+  // Gera WAV PCM 8kHz (~0.55s) com triplo bip limpo em memória (100% offline, funciona no iOS)
+  const sampleRate = 8000;
+  const durationSec = 0.55;
+  const numSamples = Math.floor(sampleRate * durationSec);
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  const writeStr = (off, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  const freqs = [880, 1108.73, 1318.51];
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const noteIdx = t < 0.16 ? 0 : t < 0.32 ? 1 : 2;
+    const localT = t - noteIdx * 0.16;
+    const env = Math.max(0, 1 - localT / 0.22) * Math.min(1, localT / 0.012);
+    const val = Math.sin(2 * Math.PI * freqs[noteIdx] * t) * env * 0.55;
+    view.setInt16(44 + i * 2, Math.max(-32767, Math.min(32767, Math.round(val * 32767))), true);
+  }
+
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return `data:audio/wav;base64,${btoa(binary)}`;
+}
 
 function unlockAudioContext() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
-    if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+    if (AudioCtx) {
+      if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+      if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+    }
+    if (!fallbackAudioEl && typeof Audio !== 'undefined') {
+      fallbackAudioEl = new Audio(createChimeWavDataUri());
+      fallbackAudioEl.preload = 'auto';
+      fallbackAudioEl.volume = 0.01;
+      fallbackAudioEl.play().then(() => {
+        fallbackAudioEl.pause();
+        fallbackAudioEl.currentTime = 0;
+        fallbackAudioEl.volume = 0.9;
+      }).catch(() => {});
+    }
     return sharedAudioCtx;
   } catch {
     return null;
@@ -70,72 +123,90 @@ function unlockAudioContext() {
 
 function playTimerChime() {
   if (!timerState.soundEnabled) return;
+  let played = false;
   try {
     const ctx = unlockAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const notes = [880, 1108.73, 1318.51];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + i * 0.14);
-      gain.gain.setValueAtTime(0.001, now + i * 0.14);
-      gain.gain.linearRampToValueAtTime(0.22, now + i * 0.14 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.34);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + i * 0.14);
-      osc.stop(now + i * 0.14 + 0.36);
-    });
+    if (ctx && ctx.state === 'running') {
+      const now = ctx.currentTime;
+      const notes = [880, 1108.73, 1318.51];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.14);
+        gain.gain.setValueAtTime(0.001, now + i * 0.14);
+        gain.gain.linearRampToValueAtTime(0.26, now + i * 0.14 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.34);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.14);
+        osc.stop(now + i * 0.14 + 0.36);
+      });
+      played = true;
+    }
   } catch {
-    // Silencioso se bloqueado
+    // Fallback HTML5 Audio abaixo
+  }
+  if (!played && fallbackAudioEl) {
+    try {
+      fallbackAudioEl.volume = 0.9;
+      fallbackAudioEl.currentTime = 0;
+      fallbackAudioEl.play().catch(() => {});
+    } catch {
+      // Silencioso se bloqueado
+    }
   }
 }
 
 function getNotificationStatus() {
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
-  return window.Notification.permission;
+  if (typeof window === 'undefined') return 'unsupported';
+  if ('Notification' in window) return window.Notification.permission;
+  return 'unsupported';
 }
 
-async function requestRestNotificationPermission(ctx) {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    ctx?.toast('Alerta visual e sonoro ativo! (Notificação push indisponível neste navegador)');
-    return false;
-  }
-  if (window.Notification.permission === 'granted') {
-    ctx?.toast('Notificações de descanso já estão ativas! 🔔', 'success');
-    return true;
-  }
-  if (window.Notification.permission === 'denied') {
-    ctx?.toast('Notificações bloqueadas no navegador. Ative nas permissões do site.', 'error');
-    return false;
-  }
+function isRestAlertActive() {
+  const status = getNotificationStatus();
+  if (status === 'granted') return timerState.soundEnabled;
+  return Boolean(timerState.inAppAlertArmed && timerState.soundEnabled);
+}
+
+function postSwTimerMessage(payload) {
   try {
-    const perm = await window.Notification.requestPermission();
-    if (perm === 'granted') {
-      ctx?.toast('Notificações ativadas! Você será avisado quando o descanso acabar. 🔔', 'success');
-      return true;
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage(payload);
     }
-    ctx?.toast('Permissão não concedida — manteremos alerta visual + som + vibração.');
-    return false;
   } catch {
-    return false;
+    // Ignorar se SW ainda não controla a página
   }
 }
 
-async function showSystemRestNotification(exName) {
-  if (typeof window === 'undefined' || !('Notification' in window)) return;
-  if (window.Notification.permission !== 'granted') return;
+function scheduleSwRestNotification(seconds, exName) {
+  if (getNotificationStatus() !== 'granted') return;
+  const iconUrl = new URL('./icons/icon-192.png', window.location.href).href;
+  postSwTimerMessage({
+    type: 'SCHEDULE_REST_NOTIFY',
+    delayMs: Math.max(1000, seconds * 1000),
+    title: '⏱️ Descanso Finalizado — Piff Paff Gym',
+    body: exName
+      ? `Hora da próxima série de ${exName}! Bora pra cima!`
+      : 'Tempo de descanso zerado! Hora da próxima série!',
+    icon: iconUrl,
+  });
+}
 
-  const title = '⏱️ Descanso Finalizado — Piff Paff Gym';
-  const body = exName
-    ? `Hora da próxima série de ${exName}! Bora pra cima!`
-    : 'Tempo de descanso zerado! Hora da próxima série!';
-  const options = {
+function cancelSwRestNotification() {
+  postSwTimerMessage({ type: 'CANCEL_REST_NOTIFY' });
+}
+
+async function sendImmediateNotification(title, body) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return false;
+  if (window.Notification.permission !== 'granted') return false;
+
+  const iconUrl = new URL('./icons/icon-192.png', window.location.href).href;
+  const fullOptions = {
     body,
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-192.png',
+    icon: iconUrl,
+    badge: iconUrl,
     vibrate: [220, 100, 220, 100, 320],
     tag: 'piff-paff-rest-done',
     renotify: true,
@@ -145,14 +216,110 @@ async function showSystemRestNotification(exName) {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.ready;
       if (reg && typeof reg.showNotification === 'function') {
-        await reg.showNotification(title, options);
-        return;
+        try {
+          await reg.showNotification(title, fullOptions);
+          return true;
+        } catch {
+          await reg.showNotification(title, { body, tag: 'piff-paff-rest-done' });
+          return true;
+        }
       }
     }
-    new window.Notification(title, options);
   } catch {
-    // Banner visual in-app cobre o aviso
+    // Tenta Notification direta abaixo
   }
+
+  try {
+    new window.Notification(title, { body, icon: iconUrl });
+    return true;
+  } catch {
+    try {
+      new window.Notification(title, { body });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+async function requestRestNotificationPermission(ctx) {
+  unlockAudioContext();
+  const status = getNotificationStatus();
+
+  // Caso 1: Navegador sem Notification API (ex.: aba comum do Safari no iPhone — Apple só libera Push no app instalado na Tela Inicial)
+  if (status === 'unsupported') {
+    timerState.inAppAlertArmed = !timerState.inAppAlertArmed;
+    timerState.soundEnabled = timerState.inAppAlertArmed;
+    if (timerState.inAppAlertArmed) {
+      playTimerChime();
+      ctx?.toast(
+        '🔔 Alerta sonoro + banner no topo ativados! Para notificação fora do app no iPhone, abra pelo ícone instalado na Tela Inicial.',
+        'success'
+      );
+    } else {
+      ctx?.toast('Alertas de descanso silenciados.', 'info');
+    }
+    return timerState.inAppAlertArmed;
+  }
+
+  // Caso 2: Permissão já concedida — alterna ou dispara teste imediato
+  if (status === 'granted') {
+    timerState.inAppAlertArmed = true;
+    timerState.soundEnabled = true;
+    playTimerChime();
+    await sendImmediateNotification(
+      '🔔 Notificações Ativas — Piff Paff Gym',
+      'Tudo certo! Você receberá aviso quando o cronômetro de descanso zerar.'
+    );
+    ctx?.toast('Notificação de teste enviada! 🔔', 'success');
+    return true;
+  }
+
+  // Caso 3: Permissão bloqueada pelo usuário/sistema
+  if (status === 'denied') {
+    timerState.inAppAlertArmed = true;
+    timerState.soundEnabled = true;
+    playTimerChime();
+    ctx?.toast(
+      'Notificações bloqueadas nos Ajustes do celular. Alerta sonoro e banner no topo mantidos ativos! 🔔',
+      'error'
+    );
+    return false;
+  }
+
+  // Caso 4: Pedir permissão nativa agora
+  try {
+    const perm = await window.Notification.requestPermission();
+    if (perm === 'granted') {
+      timerState.inAppAlertArmed = true;
+      timerState.soundEnabled = true;
+      playTimerChime();
+      await sendImmediateNotification(
+        '🔔 Notificações Ativadas — Piff Paff Gym',
+        'Você será avisado assim que o tempo de descanso acabar!'
+      );
+      ctx?.toast('Notificações ativadas com sucesso! 🔔', 'success');
+      return true;
+    }
+    timerState.inAppAlertArmed = true;
+    timerState.soundEnabled = true;
+    playTimerChime();
+    ctx?.toast('Permissão recusada — manteremos alerta sonoro + banner no topo! 🔔');
+    return false;
+  } catch {
+    timerState.inAppAlertArmed = true;
+    timerState.soundEnabled = true;
+    playTimerChime();
+    return false;
+  }
+}
+
+async function showSystemRestNotification(exName) {
+  const title = '⏱️ Descanso Finalizado — Piff Paff Gym';
+  const body = exName
+    ? `Hora da próxima série de ${exName}! Bora pra cima!`
+    : 'Tempo de descanso zerado! Hora da próxima série!';
+  await sendImmediateNotification(title, body);
 }
 
 function showInAppRestDoneBanner(exName) {
@@ -182,6 +349,7 @@ function showInAppRestDoneBanner(exName) {
 }
 
 function fireRestFinishedAlert() {
+  cancelSwRestNotification();
   playTimerChime();
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
     navigator.vibrate([220, 100, 220, 100, 320]);
@@ -204,6 +372,7 @@ function stopTimerInterval() {
   }
   timerState.running = false;
   timerState.endTimeMs = null;
+  cancelSwRestNotification();
 }
 
 function updateTimerDom() {
@@ -269,6 +438,7 @@ export function startRestTimer(seconds, exerciseName = '') {
 
   timerState.running = true;
   timerState.endTimeMs = Date.now() + timerState.remainingSec * 1000;
+  scheduleSwRestNotification(timerState.remainingSec, timerState.activeExerciseName);
   updateTimerDom();
 
   timerState.intervalId = setInterval(tickTimer, 500);
@@ -658,10 +828,10 @@ function renderActiveExecutionScreen(container, ctx, session) {
         <div class="compact-timer-right">
           <button
             id="btn-timer-notify"
-            class="timer-bell-btn ${getNotificationStatus() === 'granted' ? 'active' : ''}"
-            title="${getNotificationStatus() === 'granted' ? 'Notificação de descanso ativa' : 'Ativar notificação quando o descanso acabar'}"
+            class="timer-bell-btn ${isRestAlertActive() ? 'active' : ''}"
+            title="${isRestAlertActive() ? 'Notificações e alertas de descanso ativos (toque para testar)' : 'Ativar notificação quando o descanso acabar'}"
           >
-            ${getNotificationStatus() === 'granted' ? '🔔' : '🔕'}
+            ${isRestAlertActive() ? '🔔' : '🔕'}
           </button>
           <label class="auto-mini" title="Auto-iniciar ao marcar série">
             <input type="checkbox" id="auto-timer-check" ${timerState.autoStart ? 'checked' : ''} />

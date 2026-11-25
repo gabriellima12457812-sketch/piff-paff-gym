@@ -1,4 +1,4 @@
-const CACHE_NAME = 'piff-paff-gym-v2.17.0';
+const CACHE_NAME = 'piff-paff-gym-v2.18.0';
 
 const PRECACHE_ASSETS = [
   './',
@@ -142,4 +142,56 @@ self.addEventListener('notificationclick', (event) => {
       if (self.clients.openWindow) return self.clients.openWindow('./');
     })
   );
+});
+
+// Agendamento em segundo plano para notificação de fim de descanso (mantém vivo via waitUntil)
+let scheduledRestTimer = null;
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'CANCEL_REST_NOTIFY') {
+    if (scheduledRestTimer) {
+      clearTimeout(scheduledRestTimer);
+      scheduledRestTimer = null;
+    }
+    return;
+  }
+
+  if (data.type === 'SCHEDULE_REST_NOTIFY') {
+    if (scheduledRestTimer) {
+      clearTimeout(scheduledRestTimer);
+      scheduledRestTimer = null;
+    }
+    const delayMs = Math.max(1000, Math.min(600000, Number(data.delayMs) || 60000));
+    const title = data.title || '⏱️ Descanso Finalizado — Piff Paff Gym';
+    const body = data.body || 'Hora da próxima série!';
+    const icon = data.icon || './icons/icon-192.png';
+
+    const p = new Promise((resolve) => {
+      scheduledRestTimer = setTimeout(async () => {
+        scheduledRestTimer = null;
+        try {
+          await self.registration.showNotification(title, {
+            body,
+            icon,
+            badge: icon,
+            vibrate: [220, 100, 220, 100, 320],
+            tag: 'piff-paff-rest-done',
+            renotify: true,
+          });
+        } catch {
+          try {
+            await self.registration.showNotification(title, { body, tag: 'piff-paff-rest-done' });
+          } catch {
+            // Ignora se permissão não concedida
+          }
+        }
+        resolve();
+      }, delayMs);
+    });
+
+    if (typeof event.waitUntil === 'function') {
+      event.waitUntil(p);
+    }
+  }
 });
