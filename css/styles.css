@@ -3142,3 +3142,57 @@ body.theme-pro .back-btn {
   font-size: 11.5px;
   color: var(--text-muted);
 }
+
+/* ============================================================================
+   BLOQUEIO DE ZOOM POR DUPLO TOQUE + CONTROLE LADO A LADO DE CARGA E REPETIÇÕES
+   ============================================================================ */
+html,
+body,
+button,
+a,
+input,
+select,
+label,
+.card,
+.demo-video-stage {
+  touch-action: manipulation;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select {
+  font-size: 16px;
+}
+
+.focus-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.focus-controls-grid .focus-load-box {
+  margin-bottom: 0;
+  padding: 10px 8px;
+}
+
+.focus-controls-grid .big-load-stepper {
+  gap: 6px;
+}
+
+.focus-controls-grid .big-step-btn {
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.focus-controls-grid .big-load-input {
+  width: 100%;
+  min-width: 0;
+  font-size: 18px;
+  padding: 6px 2px;
+  text-align: center;
+}

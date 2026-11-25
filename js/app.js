@@ -528,7 +528,35 @@ function runEntrySplash() {
   setTimeout(dismiss, 1280);
 }
 
+function preventDoubleTapZoom() {
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 320) {
+        const tag = e.target?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+          e.preventDefault();
+          const interactive = e.target?.closest?.('button, a, label, [data-pick-muscle], [data-demo-stage]');
+          if (interactive && typeof interactive.click === 'function') {
+            interactive.click();
+          }
+        }
+      }
+      lastTouchEnd = now;
+    },
+    { passive: false }
+  );
+
+  // Bloqueia gesto de pinça no iOS Safari
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((evt) => {
+    document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  preventDoubleTapZoom();
   runEntrySplash();
   auth.init();
   bindAuthEvents();

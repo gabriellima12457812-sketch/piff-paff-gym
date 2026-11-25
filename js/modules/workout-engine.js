@@ -325,22 +325,38 @@ function ensureSession(ctx) {
   return activeSession;
 }
 
+function getExerciseActualReps(ex) {
+  if (typeof ex.actualReps === 'number' && Number.isFinite(ex.actualReps) && ex.actualReps > 0) {
+    return ex.actualReps;
+  }
+  const nums = String(ex.reps || '').match(/\d+/g);
+  const parsed = nums && nums.length >= 2
+    ? Math.round((Number(nums[0]) + Number(nums[1])) / 2)
+    : Number(nums?.[0]) || 10;
+  ex.actualReps = Math.max(1, parsed);
+  return ex.actualReps;
+}
+
 function calcSessionMetrics(session) {
   let totalSets = 0;
   let doneSets = 0;
+  let totalReps = 0;
   let totalVolume = 0;
 
   for (const ex of session.exercises) {
     totalSets += ex.sets.length;
-    const avgReps = parseInt(String(ex.reps).match(/\d+/)?.[0] || '10', 10);
+    const defaultReps = getExerciseActualReps(ex);
     for (const s of ex.sets) {
       if (s.done) {
         doneSets += 1;
-        totalVolume += (Number(ex.loadKg) || 0) * avgReps;
+        const repsUsed = Number(s.repsDone) || defaultReps;
+        const loadUsed = s.loadDone !== undefined ? Number(s.loadDone) : Number(ex.loadKg) || 0;
+        totalReps += repsUsed;
+        totalVolume += loadUsed * repsUsed;
       }
     }
   }
-  return { totalSets, doneSets, totalVolume: Math.round(totalVolume) };
+  return { totalSets, doneSets, totalReps, totalVolume: Math.round(totalVolume) };
 }
 
 function escapeHtml(str) {
@@ -719,41 +735,62 @@ function renderFocusExerciseView(ex, idx, totalEx, session, metrics, isPro) {
           : `<div class="clean-rpe-note">${escapeHtml(ex.rpeLabel)}${ex.prKg ? ` · Seu PR: ${ex.prKg} kg` : ''}</div>`
       }
 
-      <!-- Controle de Carga Grande e Fácil de Tocar -->
-      <div class="focus-load-box">
-        <span class="mini-eyebrow">CARGA (KG)</span>
-        <div class="big-load-stepper">
-          <button class="big-step-btn" data-load-delta="-2.5" data-ex-idx="${idx}" aria-label="Reduzir carga">−</button>
-          <input
-            type="number"
-            step="0.5"
-            min="0"
-            max="600"
-            class="big-load-input"
-            value="${ex.loadKg}"
-            data-load-input="${idx}"
-          />
-          <button class="big-step-btn" data-load-delta="2.5" data-ex-idx="${idx}" aria-label="Aumentar carga">+</button>
+      <!-- Controles de Carga (kg) e Repetições Lado a Lado -->
+      <div class="focus-controls-grid">
+        <div class="focus-load-box">
+          <span class="mini-eyebrow">CARGA (KG)</span>
+          <div class="big-load-stepper">
+            <button class="big-step-btn" data-load-delta="-2.5" data-ex-idx="${idx}" aria-label="Reduzir carga">−</button>
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              max="600"
+              class="big-load-input"
+              value="${ex.loadKg}"
+              data-load-input="${idx}"
+            />
+            <button class="big-step-btn" data-load-delta="2.5" data-ex-idx="${idx}" aria-label="Aumentar carga">+</button>
+          </div>
+        </div>
+
+        <div class="focus-load-box">
+          <span class="mini-eyebrow">REPETIÇÕES</span>
+          <div class="big-load-stepper">
+            <button class="big-step-btn" data-reps-delta="-1" data-ex-idx="${idx}" aria-label="Reduzir repetições">−</button>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              max="200"
+              class="big-load-input"
+              value="${getExerciseActualReps(ex)}"
+              data-reps-input="${idx}"
+            />
+            <button class="big-step-btn" data-reps-delta="1" data-ex-idx="${idx}" aria-label="Aumentar repetições">+</button>
+          </div>
         </div>
       </div>
 
       <!-- Checklist Vertical Limpo de Séries -->
       <div class="sets-vertical-list">
         ${ex.sets
-          .map(
-            (s, sIdx) => `
+          .map((s, sIdx) => {
+            const showReps = s.done && s.repsDone ? s.repsDone : getExerciseActualReps(ex);
+            const showLoad = s.done && s.loadDone !== undefined ? s.loadDone : ex.loadKg;
+            return `
             <button
               class="set-row-btn ${s.done ? 'done' : ''} ${ex.isFst7 && s.done ? 'done-gold' : ''}"
               data-toggle-set="${idx}:${sIdx}"
             >
               <div class="set-row-left">
                 <span class="set-row-num">Série ${s.index}</span>
-                <span class="set-row-detail">${escapeHtml(ex.reps)} reps · ${ex.loadKg} kg</span>
+                <span class="set-row-detail">${showReps} reps · ${showLoad} kg</span>
               </div>
               <span class="set-row-circle">${s.done ? '✓' : ''}</span>
             </button>
-          `
-          )
+          `;
+          })
           .join('')}
       </div>
     </section>
@@ -791,7 +828,7 @@ function renderListExercisesView(session, metrics, isPro) {
                   <div class="mini-eyebrow">${escapeHtml(ex.muscle)} · ${doneCnt}/${ex.sets.length} séries</div>
                   <strong>${idx + 1}. ${escapeHtml(ex.name)}</strong>
                 </div>
-                <span class="compact-load-pill">${ex.loadKg} kg</span>
+                <span class="compact-load-pill">${ex.loadKg} kg · ${getExerciseActualReps(ex)} reps</span>
               </div>
               <div class="sets-checklist mt-8">
                 ${ex.sets
@@ -1207,14 +1244,43 @@ function bindActiveExecutionEvents(container, ctx, session) {
     });
   });
 
+  container.querySelectorAll('[data-reps-delta]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.exIdx);
+      const delta = Number(btn.dataset.repsDelta);
+      const ex = session.exercises[idx];
+      if (!ex) return;
+      ex.actualReps = Math.max(1, Math.min(200, getExerciseActualReps(ex) + delta));
+      renderWorkoutsTab(container, ctx);
+    });
+  });
+
+  container.querySelectorAll('[data-reps-input]').forEach((inp) => {
+    inp.addEventListener('change', () => {
+      const idx = Number(inp.dataset.repsInput);
+      const ex = session.exercises[idx];
+      if (!ex) return;
+      ex.actualReps = Math.max(1, Math.min(200, Math.round(Number(inp.value) || getExerciseActualReps(ex))));
+      renderWorkoutsTab(container, ctx);
+    });
+  });
+
   container.querySelectorAll('[data-toggle-set]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const [exIdx, sIdx] = btn.dataset.toggleSet.split(':').map(Number);
       const ex = session.exercises[exIdx];
       if (!ex || !ex.sets[sIdx]) return;
-      ex.sets[sIdx].done = !ex.sets[sIdx].done;
-      if (ex.sets[sIdx].done && timerState.autoStart) {
-        startRestTimer(ex.restSec, ex.name);
+      const targetSet = ex.sets[sIdx];
+      targetSet.done = !targetSet.done;
+      if (targetSet.done) {
+        targetSet.repsDone = getExerciseActualReps(ex);
+        targetSet.loadDone = Number(ex.loadKg) || 0;
+        if (timerState.autoStart) {
+          startRestTimer(ex.restSec, ex.name);
+        }
+      } else {
+        delete targetSet.repsDone;
+        delete targetSet.loadDone;
       }
       renderWorkoutsTab(container, ctx);
     });
